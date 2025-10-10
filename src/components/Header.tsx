@@ -22,6 +22,8 @@ export const Header = ({ title, showBack, showSync }: HeaderProps) => {
 
   return (
     <header className="bg-primary text-primary-foreground shadow-sm sticky top-0 z-10">
+      {/* Safe area spacer for iOS */}
+      <div className="h-safe bg-primary" />
       <div className="container max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

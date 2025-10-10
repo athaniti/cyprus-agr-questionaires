@@ -139,6 +139,15 @@ export default {
         "slide-up": "slide-up 0.4s ease-out",
         "success-check": "success-check 0.5s ease-out",
       },
+      padding: {
+        'safe': 'env(safe-area-inset-top)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+      },
+      height: {
+        'safe': 'env(safe-area-inset-top)',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
