@@ -5,33 +5,44 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Questionnaires } from './components/Questionnaires';
 import { QuestionnaireBuilder } from './components/QuestionnaireBuilder';
+import { QuestionnaireViewer } from './components/QuestionnaireViewer';
 import { Themes } from './components/Themes';
 import { Samples } from './components/Samples';
 import { Quotas } from './components/Quotas';
 import { Locations } from './components/Locations';
 import { Reports } from './components/Reports';
 
-type View = 'dashboard' | 'questionnaires' | 'builder' | 'themes' | 'samples' | 'quotas' | 'locations' | 'reports';
+type View = 'dashboard' | 'questionnaires' | 'builder' | 'viewer' | 'themes' | 'samples' | 'quotas' | 'locations' | 'reports';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [language, setLanguage] = useState<'el' | 'en'>('el');
   const [userRole] = useState<'admin' | 'analyst'>('admin');
+  const [selectedQuestionnaireId, setSelectedQuestionnaireId] = useState<string | null>(null);
 
   const handleViewChange = (view: string) => {
     setCurrentView(view as View);
   };
 
   const handleCreateQuestionnaire = () => {
+    setSelectedQuestionnaireId(null);
     setCurrentView('builder');
   };
 
   const handleEditQuestionnaire = (id: string) => {
     console.log('Edit questionnaire:', id);
+    setSelectedQuestionnaireId(id);
     setCurrentView('builder');
   };
 
+  const handleViewQuestionnaire = (id: string) => {
+    console.log('View questionnaire:', id);
+    setSelectedQuestionnaireId(id);
+    setCurrentView('viewer');
+  };
+
   const handleBackToQuestionnaires = () => {
+    setSelectedQuestionnaireId(null);
     setCurrentView('questionnaires');
   };
 
@@ -45,12 +56,25 @@ function AppContent() {
             language={language}
             onCreateNew={handleCreateQuestionnaire}
             onEditQuestionnaire={handleEditQuestionnaire}
+            onViewQuestionnaire={handleViewQuestionnaire}
           />
         );
       case 'builder':
         return (
           <QuestionnaireBuilder
             language={language}
+            onBack={handleBackToQuestionnaires}
+          />
+        );
+      case 'viewer':
+        return (
+          <QuestionnaireViewer
+            language={language}
+            questionnaireId={selectedQuestionnaireId || ''}
+            questionnaireName={language === 'el' ? 'Έρευνα Κτηνοτροφίας 2025' : 'Livestock Survey 2025'}
+            questionnaireDescription={language === 'el' 
+              ? 'Παρακαλούμε συμπληρώστε τις πληροφορίες για το αγρόκτημά σας' 
+              : 'Please fill in the information about your farm'}
             onBack={handleBackToQuestionnaires}
           />
         );

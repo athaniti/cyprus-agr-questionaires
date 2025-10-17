@@ -17,12 +17,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Plus, Search, MoreVertical, Edit, Copy, Trash2, Eye, Download } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Plus, Search, MoreVertical, Edit, Copy, Trash2, Eye, Download, FileJson } from 'lucide-react';
 
 interface QuestionnairesProps {
   language: 'el' | 'en';
   onCreateNew: () => void;
   onEditQuestionnaire: (id: string) => void;
+  onViewQuestionnaire?: (id: string) => void;
 }
 
 const translations = {
@@ -44,7 +52,11 @@ const translations = {
     duplicate: 'Αντιγραφή',
     delete: 'Διαγραφή',
     view: 'Προβολή',
-    export: 'Εξαγωγή'
+    export: 'Εξαγωγή',
+    viewSchema: 'Προβολή Schema',
+    close: 'Κλείσιμο',
+    schemaTitle: 'Schema Ερωτηματολογίου',
+    schemaDescription: 'JSON Schema του Ερωτηματολογίου'
   },
   en: {
     title: 'Questionnaires',
@@ -64,7 +76,35 @@ const translations = {
     duplicate: 'Duplicate',
     delete: 'Delete',
     view: 'View',
-    export: 'Export'
+    export: 'Export',
+    viewSchema: 'View Schema',
+    close: 'Close',
+    schemaTitle: 'Questionnaire Schema',
+    schemaDescription: 'Form.io JSON Schema'
+  },
+  en: {
+    title: 'Questionnaires',
+    description: 'Manage and create questionnaires',
+    createNew: 'Create New',
+    search: 'Search questionnaires...',
+    name: 'Name',
+    status: 'Status',
+    responses: 'Responses',
+    lastModified: 'Last Modified',
+    actions: 'Actions',
+    active: 'Active',
+    draft: 'Draft',
+    archived: 'Archived',
+    completed: 'Completed',
+    edit: 'Edit',
+    duplicate: 'Duplicate',
+    delete: 'Delete',
+    view: 'View',
+    export: 'Export',
+    viewSchema: 'View Schema',
+    close: 'Close',
+    schemaTitle: 'Questionnaire Schema',
+    schemaDescription: 'Form.io JSON Schema'
   }
 };
 
@@ -125,9 +165,11 @@ const mockQuestionnaires = [
   }
 ];
 
-export function Questionnaires({ language, onCreateNew, onEditQuestionnaire }: QuestionnairesProps) {
+export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onViewQuestionnaire }: QuestionnairesProps) {
   const t = translations[language];
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSchemaDialog, setShowSchemaDialog] = useState(false);
+  const [selectedSchema, setSelectedSchema] = useState<any>(null);
 
   const filteredQuestionnaires = mockQuestionnaires.filter(q =>
     q.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -145,6 +187,55 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire }: Q
         return { backgroundColor: '#F3F4F6', color: '#374151' };
       default:
         return { backgroundColor: '#F3F4F6', color: '#374151' };
+    }
+  };
+
+  const handleViewSchema = (questionnaire: any) => {
+    // Mock schema for demonstration - in production, this would come from the questionnaire data
+    const mockSchema = {
+      display: 'form',
+      components: [
+        {
+          type: 'textfield',
+          key: 'farmerName',
+          label: language === 'el' ? 'Όνομα Αγρότη' : 'Farmer Name',
+          placeholder: language === 'el' ? 'Εισάγετε όνομα' : 'Enter name',
+          validate: { required: true }
+        },
+        {
+          type: 'number',
+          key: 'landSize',
+          label: language === 'el' ? 'Μέγεθος Γης (στρέμματα)' : 'Land Size (acres)',
+          validate: { required: true }
+        },
+        {
+          type: 'select',
+          key: 'cropType',
+          label: language === 'el' ? 'Τύπος Καλλιέργειας' : 'Crop Type',
+          data: {
+            values: [
+              { label: language === 'el' ? 'Σιτηρά' : 'Cereals', value: 'cereals' },
+              { label: language === 'el' ? 'Λαχανικά' : 'Vegetables', value: 'vegetables' },
+              { label: language === 'el' ? 'Φρούτα' : 'Fruits', value: 'fruits' }
+            ]
+          }
+        }
+      ]
+    };
+    setSelectedSchema(mockSchema);
+    setShowSchemaDialog(true);
+  };
+
+  const handleExportSchema = () => {
+    if (selectedSchema) {
+      const dataStr = JSON.stringify(selectedSchema, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+      const exportFileDefaultName = 'questionnaire_schema.json';
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
     }
   };
 
@@ -243,9 +334,16 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire }: Q
                           <Edit className="h-4 w-4" />
                           {t.edit}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem 
+                          onClick={() => onViewQuestionnaire && onViewQuestionnaire(questionnaire.id)} 
+                          className="gap-2"
+                        >
                           <Eye className="h-4 w-4" />
                           {t.view}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewSchema(questionnaire)} className="gap-2">
+                          <FileJson className="h-4 w-4" />
+                          {t.viewSchema}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2">
                           <Copy className="h-4 w-4" />
@@ -268,6 +366,39 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire }: Q
           </Table>
         </CardContent>
       </Card>
+
+      {/* Schema Dialog */}
+      <Dialog open={showSchemaDialog} onOpenChange={setShowSchemaDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{t.schemaTitle}</DialogTitle>
+            <DialogDescription>{t.schemaDescription}</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportSchema}
+                className="gap-2 rounded-xl"
+              >
+                <Download className="h-4 w-4" />
+                {t.export}
+              </Button>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-xl overflow-auto max-h-[500px]">
+              <pre className="text-xs text-gray-800">
+                {JSON.stringify(selectedSchema, null, 2)}
+              </pre>
+            </div>
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setShowSchemaDialog(false)} className="rounded-xl">
+              {t.close}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
