@@ -162,9 +162,11 @@ INSERT INTO themes (id, name, description, category) VALUES
 ('b8c9d0e1-f2a3-4456-b8c9-d0e1f2a34567', 'Αλιεία', 'Ερωτηματολόγια για αλιευτικές δραστηριότητες', 'Fisheries'),
 ('c9d0e1f2-a3b4-4567-c9d0-e1f2a3b45678', 'Άρδευση', 'Ερωτηματολόγια για αρδευτικά συστήματα', 'Irrigation');
 
--- Create a sample admin user
+-- Create sample users
 INSERT INTO users (id, email, first_name, last_name, role, organization) VALUES
-('d0e1f2a3-b4c5-4678-d0e1-f2a3b4c56789', 'admin@agriculture.gov.cy', 'Διαχειριστής', 'Συστήματος', 'admin', 'Υπουργείο Γεωργίας');
+('d0e1f2a3-b4c5-4678-d0e1-f2a3b4c56789', 'admin@agriculture.gov.cy', 'Διαχειριστής', 'Συστήματος', 'admin', 'Υπουργείο Γεωργίας'),
+('f2a3b4c5-d6e7-4890-f2a3-b4c5d6e78901', 'user@agriculture.gov.cy', 'Χρήστης', 'Δοκιμών', 'analyst', 'Υπουργείο Γεωργίας'),
+('a3b4c5d6-e7f8-4901-a3b4-c5d6e7f89012', 'farmer@email.com', 'Γιάννης', 'Παπαδόπουλος', 'farmer', 'Αγρότης');
 
 -- Create sample questionnaire
 INSERT INTO questionnaires (id, name, description, category, schema, target_responses, created_by) VALUES
@@ -216,6 +218,143 @@ INSERT INTO questionnaire_quotas (questionnaire_id, region, target_count) VALUES
 ('e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890', 'Λάρνακα', 60),
 ('e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890', 'Πάφος', 50),
 ('e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890', 'Αμμόχωστος', 40);
+
+-- Create additional sample questionnaires
+INSERT INTO questionnaires (id, name, description, category, schema, target_responses, status, created_by, published_at) VALUES
+('b4c5d6e7-f8a9-4012-b4c5-d6e7f8a90123', 
+'Έρευνα Φυτικής Παραγωγής 2025', 
+'Ετήσια έρευνα για καλλιέργειες και σπόρους', 
+'Crops',
+'{
+  "display": "form",
+  "components": [
+    {
+      "type": "textfield",
+      "key": "farmName",
+      "label": "Όνομα Αγροκτήματος",
+      "validate": {"required": true}
+    },
+    {
+      "type": "select",
+      "key": "cropType",
+      "label": "Κύριος Τύπος Καλλιέργειας",
+      "data": {
+        "values": [
+          {"label": "Σιτηρά", "value": "cereals"},
+          {"label": "Λαχανικά", "value": "vegetables"},
+          {"label": "Φρούτα", "value": "fruits"},
+          {"label": "Ελιές", "value": "olives"}
+        ]
+      }
+    },
+    {
+      "type": "number",
+      "key": "totalArea",
+      "label": "Συνολική Έκταση (στρέμματα)",
+      "validate": {"required": true}
+    }
+  ]
+}',
+250, 'active', 'd0e1f2a3-b4c5-4678-d0e1-f2a3b4c56789', NOW()),
+
+('c5d6e7f8-a9b0-4123-c5d6-e7f8a9b01234', 
+'Έρευνα Αρδευτικών Συστημάτων', 
+'Καταγραφή αρδευτικών μεθόδων και υδατικών πόρων', 
+'Irrigation',
+'{
+  "display": "form",
+  "components": [
+    {
+      "type": "textfield",
+      "key": "farmerName",
+      "label": "Όνομα Αγρότη",
+      "validate": {"required": true}
+    },
+    {
+      "type": "select",
+      "key": "irrigationType",
+      "label": "Τύπος Άρδευσης",
+      "data": {
+        "values": [
+          {"label": "Στάγδην", "value": "drip"},
+          {"label": "Καταιονισμός", "value": "sprinkler"},
+          {"label": "Πλημμύρα", "value": "flood"},
+          {"label": "Μικροκαταιονισμός", "value": "micro_sprinkler"}
+        ]
+      }
+    },
+    {
+      "type": "radio",
+      "key": "waterSource",
+      "label": "Πηγή Νερού",
+      "values": [
+        {"label": "Γεώτρηση", "value": "borehole"},
+        {"label": "Δημόσιο Δίκτυο", "value": "public"},
+        {"label": "Φράγμα/Λίμνη", "value": "reservoir"}
+      ]
+    }
+  ]
+}',
+150, 'draft', 'd0e1f2a3-b4c5-4678-d0e1-f2a3b4c56789', NULL);
+
+-- Create some sample responses
+INSERT INTO questionnaire_responses (id, questionnaire_id, user_id, response_data, status, farm_name, region, municipality, started_at, submitted_at, completed_at) VALUES
+('r1a2b3c4-d5e6-4f78-r1a2-b3c4d5e6f789', 
+'e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890',
+'a3b4c5d6-e7f8-4901-a3b4-c5d6e7f89012',
+'{
+  "farmerName": "Γιάννης Παπαδόπουλος",
+  "cattleCount": 45,
+  "farmType": "dairy"
+}',
+'completed', 
+'Αγρόκτημα Παπαδόπουλου', 
+'Λευκωσία', 
+'Στρόβολος',
+NOW() - INTERVAL ''5 days'',
+NOW() - INTERVAL ''4 days'',
+NOW() - INTERVAL ''4 days''),
+
+('r2b3c4d5-e6f7-4890-r2b3-c4d5e6f78901', 
+'e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890',
+'f2a3b4c5-d6e7-4890-f2a3-b4c5d6e78901',
+'{
+  "farmerName": "Μαρία Γεωργίου",
+  "cattleCount": 28,
+  "farmType": "mixed"
+}',
+'submitted', 
+'Κτήμα Γεωργίου', 
+'Λεμεσός', 
+'Λεμεσός',
+NOW() - INTERVAL ''3 days'',
+NOW() - INTERVAL ''2 days'',
+NULL),
+
+('r3c4d5e6-f7a8-4901-r3c4-d5e6f7a89012', 
+'b4c5d6e7-f8a9-4012-b4c5-d6e7f8a90123',
+'a3b4c5d6-e7f8-4901-a3b4-c5d6e7f89012',
+'{
+  "farmName": "Αγροτική Μονάδα Χριστοδούλου",
+  "cropType": "vegetables",
+  "totalArea": 120
+}',
+'completed', 
+'Αγροτική Μονάδα Χριστοδούλου', 
+'Λάρνακα', 
+'Λάρνακα',
+NOW() - INTERVAL ''1 day'',
+NOW() - INTERVAL ''6 hours'',
+NOW() - INTERVAL ''6 hours'');
+
+-- Update questionnaire response counts
+UPDATE questionnaires SET current_responses = 2 WHERE id = 'e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890';
+UPDATE questionnaires SET current_responses = 1 WHERE id = 'b4c5d6e7-f8a9-4012-b4c5-d6e7f8a90123';
+
+-- Create some invitations
+INSERT INTO questionnaire_invitations (questionnaire_id, user_id, email, status, sent_at, expires_at) VALUES
+('e1f2a3b4-c5d6-4789-e1f2-a3b4c5d67890', 'a3b4c5d6-e7f8-4901-a3b4-c5d6e7f89012', 'farmer@email.com', 'accepted', NOW() - INTERVAL ''5 days'', NOW() + INTERVAL ''25 days''),
+('b4c5d6e7-f8a9-4012-b4c5-d6e7f8a90123', 'a3b4c5d6-e7f8-4901-a3b4-c5d6e7f89012', 'farmer@email.com', 'pending', NOW() - INTERVAL ''2 days'', NOW() + INTERVAL ''28 days'');
 
 -- Create views for reporting
 CREATE OR REPLACE VIEW questionnaire_summary AS
