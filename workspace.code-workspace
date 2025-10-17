@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "webapp-react"
+		},
+		{
+			"path": "CyprusAgriculture.API"
 		}
 	]
 }
