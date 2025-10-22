@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { TableViewer } from './TableViewer';
 
 interface QuestionnaireViewerProps {
   language: 'el' | 'en';
@@ -36,6 +37,31 @@ interface Question {
   validation?: {
     min?: number;
     max?: number;
+  };
+  tableConfig?: {
+    id: string;
+    name: string;
+    nameEn?: string;
+    description?: string;
+    columns: Array<{
+      id: string;
+      name: string;
+      nameEn?: string;
+      type: 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox';
+      required: boolean;
+      options?: string[];
+      validation?: {
+        min?: number;
+        max?: number;
+        pattern?: string;
+      };
+      code?: string;
+      category?: string;
+    }>;
+    minRows?: number;
+    maxRows?: number;
+    allowAddRows: boolean;
+    allowDeleteRows: boolean;
   };
 }
 
@@ -332,6 +358,16 @@ export function QuestionnaireViewer({
               </div>
             ))}
           </div>
+        )}
+        
+        {question.type === 'table' && question.tableConfig && (
+          <TableViewer
+            language={language}
+            config={question.tableConfig}
+            value={formData[question.id] || []}
+            onChange={(rows) => handleInputChange(question.id, rows)}
+            errors={errors}
+          />
         )}
         
         {hasError && (

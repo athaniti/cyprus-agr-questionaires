@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using CyprusAgriculture.API.Data;
+using CyprusAgriculture.API.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<CyprusAgricultureDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSnakeCaseNamingConvention();
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -18,7 +22,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000") // React dev servers
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5174") // React dev servers
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

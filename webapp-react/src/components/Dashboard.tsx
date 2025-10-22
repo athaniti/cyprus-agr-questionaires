@@ -1,79 +1,21 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useLanguage } from '../contexts/LanguageContext';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { FileText, Users, Send, TrendingUp, MapPin, CheckCircle2 } from 'lucide-react';
-import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
-
-const districtData = [
-  { name: 'Λευκωσία / Nicosia', el: 'Λευκωσία', en: 'Nicosia', completed: 245, target: 300 },
-  { name: 'Λεμεσός / Limassol', el: 'Λεμεσός', en: 'Limassol', completed: 189, target: 250 },
-  { name: 'Λάρνακα / Larnaca', el: 'Λάρνακα', en: 'Larnaca', completed: 156, target: 200 },
-  { name: 'Πάφος / Paphos', el: 'Πάφος', en: 'Paphos', completed: 134, target: 180 },
-  { name: 'Αμμόχωστος / Famagusta', el: 'Αμμόχωστος', en: 'Famagusta', completed: 98, target: 150 },
-];
-
-const trendData = [
-  { date: '01/10', responses: 45 },
-  { date: '02/10', responses: 67 },
-  { date: '03/10', responses: 89 },
-  { date: '04/10', responses: 112 },
-  { date: '05/10', responses: 145 },
-  { date: '06/10', responses: 178 },
-  { date: '07/10', responses: 203 },
-  { date: '08/10', responses: 234 },
-  { date: '09/10', responses: 267 },
-  { date: '10/10', responses: 298 },
-];
-
-const categoryData = [
-  { name: 'Φυτική Παραγωγή / Crop Production', value: 342, color: '#004B87' },
-  { name: 'Κτηνοτροφία / Livestock', value: 234, color: '#0C9A8F' },
-  { name: 'Αλιεία / Fisheries', value: 123, color: '#F59E0B' },
-  { name: 'Άλλο / Other', value: 89, color: '#8B5CF6' },
-];
-
-const recentActivity = [
-  { 
-    action: { el: 'Νέο ερωτηματολόγιο "Καλλιέργειες 2025" δημιουργήθηκε', en: 'New questionnaire "Crops 2025" created' },
-    time: '2h ago',
-    user: 'Μαρία Γεωργίου / Maria Georgiou',
-    type: 'create'
-  },
-  {
-    action: { el: '45 νέες προσκλήσεις απεστάλησαν', en: '45 new invitations sent' },
-    time: '4h ago',
-    user: 'Ανδρέας Παπαδόπουλος / Andreas Papadopoulos',
-    type: 'send'
-  },
-  {
-    action: { el: 'Ποσοστώσεις ενημερώθηκαν για Λεμεσό', en: 'Quotas updated for Limassol' },
-    time: '6h ago',
-    user: 'Ελένη Χριστοδούλου / Eleni Christodoulou',
-    type: 'update'
-  },
-  {
-    action: { el: '12 ερωτηματολόγια ολοκληρώθηκαν', en: '12 questionnaires completed' },
-    time: '8h ago',
-    user: 'System',
-    type: 'complete'
-  },
-];
-
-const topCommunities = [
-  { name: 'Αγλαντζιά / Aglandjia', completed: 89, target: 100, rate: 89 },
-  { name: 'Λακατάμια / Lakatamia', completed: 76, target: 90, rate: 84 },
-  { name: 'Στρόβολος / Strovolos', completed: 72, target: 95, rate: 76 },
-  { name: 'Λατσιά / Latsia', completed: 65, target: 80, rate: 81 },
-  { name: 'Έγκωμη / Engomi', completed: 58, target: 75, rate: 77 },
-];
+import { FileText, Users, Send, TrendingUp, CheckCircle2 } from 'lucide-react';
 
 export function Dashboard() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
+  const [loading, setLoading] = useState(true);
+
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const stats = [
     {
-      title: t('dashboard.activeQuestionnaires'),
+      title: language === 'el' ? 'Ενεργά Ερωτηματολόγια' : 'Active Questionnaires',
       value: '12',
       icon: FileText,
       change: '+2',
@@ -81,7 +23,7 @@ export function Dashboard() {
       bgColor: '#EBF4FF'
     },
     {
-      title: t('dashboard.completedResponses'),
+      title: language === 'el' ? 'Ολοκληρωμένες Απαντήσεις' : 'Completed Responses',
       value: '822',
       icon: CheckCircle2,
       change: '+156',
@@ -89,7 +31,7 @@ export function Dashboard() {
       bgColor: '#E6F9F7'
     },
     {
-      title: t('dashboard.pendingInvitations'),
+      title: language === 'el' ? 'Εκκρεμείς Προσκλήσεις' : 'Pending Invitations',
       value: '234',
       icon: Send,
       change: '-18',
@@ -97,59 +39,75 @@ export function Dashboard() {
       bgColor: '#FEF3E2'
     },
     {
-      title: t('dashboard.completionRate'),
-      value: '73%',
-      icon: TrendingUp,
-      change: '+5%',
+      title: language === 'el' ? 'Σύνολο Χρηστών' : 'Total Users',
+      value: '567',
+      icon: Users,
+      change: '+24',
       color: '#8B5CF6',
       bgColor: '#F3EDFF'
-    },
+    }
   ];
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6" style={{ backgroundColor: '#F5F6FA' }}>
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" style={{ backgroundColor: '#F5F6FA' }}>
       {/* Page Header */}
       <div>
-        <h1 className="text-gray-900">{t('dashboard.title')}</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-gray-900 text-3xl font-bold">
+          {language === 'el' ? 'Πίνακας Ελέγχου' : 'Dashboard'}
+        </h1>
+        <p className="text-gray-600 mt-2">
           {language === 'el' 
-            ? 'Επισκόπηση της δραστηριότητας και της προόδου των ερωτηματολογίων' 
-            : 'Overview of activity and questionnaire progress'}
+            ? 'Επισκόπηση των ερωτηματολογίων και απαντήσεων' 
+            : 'Overview of questionnaires and responses'}
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
-          const Icon = stat.icon;
+          const IconComponent = stat.icon;
           return (
             <Card key={index} className="border-0 shadow-sm rounded-2xl">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 mb-2">{stat.title}</p>
-                    <p className="text-gray-900" style={{ fontSize: '2rem', lineHeight: '1' }}>{stat.value}</p>
-                    <div className="flex items-center gap-1 mt-2">
-                      <Badge 
-                        variant="secondary" 
-                        className="text-xs"
+                    <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                    <div className="flex items-center mt-2">
+                      <span 
+                        className="text-sm font-medium px-2 py-1 rounded-lg"
                         style={{ 
-                          backgroundColor: stat.bgColor,
-                          color: stat.color
+                          backgroundColor: stat.change.startsWith('+') ? '#E6F9F7' : '#FEE2E2',
+                          color: stat.change.startsWith('+') ? '#0C9A8F' : '#DC2626'
                         }}
                       >
                         {stat.change}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {language === 'el' ? 'τις τελευταίες 7 μέρες' : 'last 7 days'}
+                      </span>
+                      <span className="text-xs text-gray-500 ml-2">
+                        {language === 'el' ? 'αυτή την εβδομάδα' : 'this week'}
                       </span>
                     </div>
                   </div>
                   <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                    className="w-12 h-12 rounded-xl flex items-center justify-center"
                     style={{ backgroundColor: stat.bgColor }}
                   >
-                    <Icon className="h-6 w-6" style={{ color: stat.color }} />
+                    <IconComponent className="h-6 w-6" style={{ color: stat.color }} />
                   </div>
                 </div>
               </CardContent>
@@ -158,183 +116,87 @@ export function Dashboard() {
         })}
       </div>
 
-      {/* Charts Row */}
+      {/* Simple Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Progress by District */}
         <Card className="border-0 shadow-sm rounded-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" style={{ color: '#004B87' }} />
-              {t('dashboard.progressByDistrict')}
+              <TrendingUp className="h-5 w-5" style={{ color: '#004B87' }} />
+              {language === 'el' ? 'Πρόοδος Συλλογής' : 'Collection Progress'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={districtData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis 
-                  dataKey={language === 'el' ? 'el' : 'en'} 
-                  tick={{ fontSize: 12 }}
-                  stroke="#6B7280"
-                />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Bar 
-                  dataKey="completed" 
-                  fill="#004B87" 
-                  name={language === 'el' ? 'Ολοκληρωμένα' : 'Completed'}
-                  radius={[8, 8, 0, 0]}
-                />
-                <Bar 
-                  dataKey="target" 
-                  fill="#E5E7EB" 
-                  name={language === 'el' ? 'Στόχος' : 'Target'}
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">
+                  {language === 'el' ? 'Φυτική Παραγωγή' : 'Crop Production'}
+                </span>
+                <span className="text-sm font-medium">85%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="h-2 rounded-full" 
+                  style={{ width: '85%', backgroundColor: '#0C9A8F' }}
+                ></div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">
+                  {language === 'el' ? 'Κτηνοτροφία' : 'Livestock'}
+                </span>
+                <span className="text-sm font-medium">72%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="h-2 rounded-full" 
+                  style={{ width: '72%', backgroundColor: '#004B87' }}
+                ></div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Completion Trends */}
-        <Card className="border-0 shadow-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" style={{ color: '#0C9A8F' }} />
-              {t('dashboard.completionTrends')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6B7280" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="responses" 
-                  stroke="#0C9A8F" 
-                  strokeWidth={3}
-                  name={language === 'el' ? 'Απαντήσεις' : 'Responses'}
-                  dot={{ fill: '#0C9A8F', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Category Distribution */}
         <Card className="border-0 shadow-sm rounded-2xl">
           <CardHeader>
             <CardTitle>
-              {language === 'el' ? 'Κατανομή ανά Κατηγορία' : 'Distribution by Category'}
+              {language === 'el' ? 'Πρόσφατη Δραστηριότητα' : 'Recent Activity'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2 mt-4">
-              {categoryData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-gray-700">
-                      {language === 'el' ? item.name.split(' / ')[0] : item.name.split(' / ')[1]}
-                    </span>
-                  </div>
-                  <span className="text-gray-900">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="border-0 shadow-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
-          </CardHeader>
-          <CardContent>
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex gap-3">
-                  <div 
-                    className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                    style={{ backgroundColor: '#0C9A8F' }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">
-                      {language === 'el' ? activity.action.el : activity.action.en}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {activity.user} • {activity.time}
-                    </p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
+                <div>
+                  <p className="text-sm text-gray-900">
+                    {language === 'el' 
+                      ? 'Νέο ερωτηματολόγιο δημιουργήθηκε' 
+                      : 'New questionnaire created'}
+                  </p>
+                  <p className="text-xs text-gray-500">2 ώρες πριν</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Performing Communities */}
-        <Card className="border-0 shadow-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle>{t('dashboard.topPerforming')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topCommunities.map((community, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-900">
-                      {language === 'el' ? community.name.split(' / ')[0] : community.name.split(' / ')[1]}
-                    </span>
-                    <span className="text-gray-600">
-                      {community.completed}/{community.target}
-                    </span>
-                  </div>
-                  <Progress value={community.rate} className="h-2" />
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
+                <div>
+                  <p className="text-sm text-gray-900">
+                    {language === 'el' 
+                      ? '45 νέες απαντήσεις υποβλήθηκαν' 
+                      : '45 new responses submitted'}
+                  </p>
+                  <p className="text-xs text-gray-500">4 ώρες πριν</p>
                 </div>
-              ))}
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2"></div>
+                <div>
+                  <p className="text-sm text-gray-900">
+                    {language === 'el' 
+                      ? 'Ποσοστώσεις ενημερώθηκαν' 
+                      : 'Quotas updated'}
+                  </p>
+                  <p className="text-xs text-gray-500">6 ώρες πριν</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

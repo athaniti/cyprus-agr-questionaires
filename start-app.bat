@@ -1,0 +1,16 @@
+@echo off
+echo Starting Cyprus Agriculture App...
+
+echo Starting API Server...
+start cmd /k "cd /d C:\Repos\cyprus-agr-questionaires\CyprusAgriculture.API && dotnet run"
+
+echo Waiting 5 seconds...
+timeout /t 5 /nobreak
+
+echo Starting React App...
+start cmd /k "cd /d C:\Repos\cyprus-agr-questionaires\webapp-react && npm run dev"
+
+echo Both servers are starting...
+echo API: http://localhost:5096
+echo React: http://localhost:3000
+pause

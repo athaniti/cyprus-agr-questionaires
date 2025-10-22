@@ -53,6 +53,15 @@ const translations: Record<Language, Record<string, string>> = {
     'questionnaires.edit': 'Επεξεργασία',
     'questionnaires.view': 'Προβολή',
     'questionnaires.delete': 'Διαγραφή',
+    'duplicate': 'Αντιγραφή',
+    'questionnaire.duplicated': 'Το ερωτηματολόγιο αντιγράφηκε επιτυχώς!',
+    
+    // Question Management
+    'expandAll': 'Ανάπτυξη Όλων',
+    'collapseAll': 'Σύμπτυξη Όλων',
+    'drillDown': 'Drill Down',
+    'sourceQuestion': 'Πηγή Ερώτηση',
+    'optionsMapping': 'Αντιστοίχιση Επιλογών',
     
     // Questionnaire Builder
     'builder.title': 'Δημιουργία Ερωτηματολογίου',
@@ -186,6 +195,15 @@ const translations: Record<Language, Record<string, string>> = {
     'questionnaires.edit': 'Edit',
     'questionnaires.view': 'View',
     'questionnaires.delete': 'Delete',
+    'duplicate': 'Duplicate',
+    'questionnaire.duplicated': 'Questionnaire duplicated successfully!',
+    
+    // Question Management
+    'expandAll': 'Expand All',
+    'collapseAll': 'Collapse All',
+    'drillDown': 'Drill Down',
+    'sourceQuestion': 'Source Question',
+    'optionsMapping': 'Options Mapping',
     
     // Questionnaire Builder
     'builder.title': 'Create Questionnaire',

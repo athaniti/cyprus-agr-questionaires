@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import * as React from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -24,7 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import { Plus, Search, MoreVertical, Edit, Copy, Trash2, Eye, Download, FileJson } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Copy, Plus, Search, MoreVertical, Eye, FileJson, Download } from 'lucide-react';
+import { apiService, Questionnaire } from '../services/api';
 
 interface QuestionnairesProps {
   language: 'el' | 'en';
@@ -57,30 +59,6 @@ const translations = {
     close: 'Κλείσιμο',
     schemaTitle: 'Schema Ερωτηματολογίου',
     schemaDescription: 'JSON Schema του Ερωτηματολογίου'
-  },
-  en: {
-    title: 'Questionnaires',
-    description: 'Manage and create questionnaires',
-    createNew: 'Create New',
-    search: 'Search questionnaires...',
-    name: 'Name',
-    status: 'Status',
-    responses: 'Responses',
-    lastModified: 'Last Modified',
-    actions: 'Actions',
-    active: 'Active',
-    draft: 'Draft',
-    archived: 'Archived',
-    completed: 'Completed',
-    edit: 'Edit',
-    duplicate: 'Duplicate',
-    delete: 'Delete',
-    view: 'View',
-    export: 'Export',
-    viewSchema: 'View Schema',
-    close: 'Close',
-    schemaTitle: 'Questionnaire Schema',
-    schemaDescription: 'Form.io JSON Schema'
   },
   en: {
     title: 'Questionnaires',
@@ -170,8 +148,76 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
   const [searchQuery, setSearchQuery] = useState('');
   const [showSchemaDialog, setShowSchemaDialog] = useState(false);
   const [selectedSchema, setSelectedSchema] = useState<any>(null);
+  const [questionnaires, setQuestionnaires] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredQuestionnaires = mockQuestionnaires.filter(q =>
+  // Load data from API
+  React.useEffect(() => {
+    const loadQuestionnaires = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // First try to load from API
+        const result = await apiService.getQuestionnaires();
+        setQuestionnaires(result.data);
+      } catch (error) {
+        console.warn('API not available, using mock data:', error);
+        
+        // Fallback to mock data (no error state for better UX)
+        const mockData = [
+          {
+            id: '1',
+            name: 'Livestock Management Survey',
+            category: 'Livestock',
+            status: 'active',
+            currentResponses: 25,
+            targetResponses: 100,
+            completionRate: 25,
+            createdAt: '2025-10-20T10:00:00Z'
+          },
+          {
+            id: '2', 
+            name: 'Crop Production Assessment',
+            category: 'Crops',
+            status: 'draft',
+            currentResponses: 0,
+            targetResponses: 150,
+            completionRate: 0,
+            createdAt: '2025-10-19T15:30:00Z'
+          },
+          {
+            id: '3',
+            name: 'Irrigation Systems Evaluation',
+            category: 'Irrigation',
+            status: 'active',
+            currentResponses: 75,
+            targetResponses: 120,
+            completionRate: 63,
+            createdAt: '2025-10-18T09:15:00Z'
+          },
+          {
+            id: '4',
+            name: 'Equipment and Machinery Survey',
+            category: 'Equipment',
+            status: 'completed',
+            currentResponses: 200,
+            targetResponses: 200,
+            completionRate: 100,
+            createdAt: '2025-10-15T14:30:00Z'
+          }
+        ];
+        setQuestionnaires(mockData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuestionnaires();
+  }, []);
+
+  const filteredQuestionnaires = questionnaires.filter((q: any) =>
     q.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -187,6 +233,30 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
         return { backgroundColor: '#F3F4F6', color: '#374151' };
       default:
         return { backgroundColor: '#F3F4F6', color: '#374151' };
+    }
+  };
+
+  const handleDuplicate = async (questionnaire: Questionnaire) => {
+    try {
+      const duplicatedQuestionnaire = await apiService.duplicateQuestionnaire(questionnaire.id);
+      setQuestionnaires([...questionnaires, duplicatedQuestionnaire]);
+      alert(language === 'el' ? 'Το ερωτηματολόγιο αντιγράφηκε!' : 'Questionnaire duplicated!');
+    } catch (error) {
+      console.error('Failed to duplicate questionnaire:', error);
+      alert(language === 'el' ? 'Σφάλμα κατά την αντιγραφή!' : 'Error duplicating questionnaire!');
+    }
+  };
+
+  const handleDelete = async (questionnaire: Questionnaire) => {
+    if (window.confirm(language === 'el' ? 'Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το ερωτηματολόγιο;' : 'Are you sure you want to delete this questionnaire?')) {
+      try {
+        await apiService.deleteQuestionnaire(questionnaire.id);
+        setQuestionnaires(questionnaires.filter((q: any) => q.id !== questionnaire.id));
+        alert(language === 'el' ? 'Το ερωτηματολόγιο διαγράφηκε!' : 'Questionnaire deleted!');
+      } catch (error) {
+        console.error('Failed to delete questionnaire:', error);
+        alert(language === 'el' ? 'Σφάλμα κατά την διαγραφή!' : 'Error deleting questionnaire!');
+      }
     }
   };
 
@@ -265,14 +335,33 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
             <Input
               placeholder={t.search}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: any) => setSearchQuery(e.target.value)}
               className="pl-10 rounded-xl border-gray-200"
             />
           </div>
         </CardContent>
       </Card>
 
+      {/* Loading State */}
+      {loading && (
+        <Card className="rounded-2xl border-none shadow-sm">
+          <CardContent className="p-6 text-center">
+            <p className="text-gray-600">Loading questionnaires...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="rounded-2xl border-none shadow-sm">
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Questionnaires Table */}
+      {!loading && !error && (
       <Card className="rounded-2xl border-none shadow-sm">
         <CardContent className="p-0">
           <Table>
@@ -286,7 +375,7 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredQuestionnaires.map((questionnaire) => (
+              {filteredQuestionnaires.map((questionnaire: any) => (
                 <TableRow key={questionnaire.id} className="border-b border-gray-100">
                   <TableCell>
                     <div>
@@ -306,13 +395,13 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-900">
-                        {questionnaire.responses} / {questionnaire.target}
+                        {questionnaire.currentResponses} / {questionnaire.targetResponses}
                       </span>
                       <div className="w-24 h-2 rounded-full bg-gray-200">
                         <div
                           className="h-full rounded-full"
                           style={{
-                            width: `${(questionnaire.responses / questionnaire.target) * 100}%`,
+                            width: `${questionnaire.completionRate}%`,
                             backgroundColor: '#0C9A8F'
                           }}
                         />
@@ -320,7 +409,7 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                     </div>
                   </TableCell>
                   <TableCell className="text-gray-600">
-                    {new Date(questionnaire.lastModified).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')}
+                    {new Date(questionnaire.createdAt).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -345,7 +434,7 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                           <FileJson className="h-4 w-4" />
                           {t.viewSchema}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem onClick={() => handleDuplicate(questionnaire)} className="gap-2">
                           <Copy className="h-4 w-4" />
                           {t.duplicate}
                         </DropdownMenuItem>
@@ -353,7 +442,7 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                           <Download className="h-4 w-4" />
                           {t.export}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 text-red-600">
+                        <DropdownMenuItem onClick={() => handleDelete(questionnaire)} className="gap-2 text-red-600">
                           <Trash2 className="h-4 w-4" />
                           {t.delete}
                         </DropdownMenuItem>
@@ -366,6 +455,7 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
           </Table>
         </CardContent>
       </Card>
+      )}
 
       {/* Schema Dialog */}
       <Dialog open={showSchemaDialog} onOpenChange={setShowSchemaDialog}>

@@ -14,7 +14,13 @@ import { Badge } from './ui/badge';
 interface HeaderProps {
   language: 'el' | 'en';
   onLanguageChange: (lang: 'el' | 'en') => void;
-  userRole: 'admin' | 'analyst';
+  userRole: 'admin' | 'analyst' | 'farmer';
+  user?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  onLogout?: () => void;
 }
 
 const translations = {
@@ -24,7 +30,8 @@ const translations = {
     settings: 'Ρυθμίσεις',
     logout: 'Αποσύνδεση',
     admin: 'Διαχειριστής',
-    analyst: 'Αναλυτής'
+    analyst: 'Αναλυτής',
+    farmer: 'Αγρότης'
   },
   en: {
     notifications: 'Notifications',
@@ -32,11 +39,12 @@ const translations = {
     settings: 'Settings',
     logout: 'Logout',
     admin: 'Administrator',
-    analyst: 'Analyst'
+    analyst: 'Analyst',
+    farmer: 'Farmer'
   }
 };
 
-export function Header({ language, onLanguageChange, userRole }: HeaderProps) {
+export function Header({ language, onLanguageChange, userRole, user, onLogout }: HeaderProps) {
   const t = translations[language];
 
   return (
@@ -111,9 +119,11 @@ export function Header({ language, onLanguageChange, userRole }: HeaderProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start">
-                <span className="text-sm">Admin User</span>
+                <span className="text-sm">
+                  {user ? `${user.firstName} ${user.lastName}` : 'Admin User'}
+                </span>
                 <Badge variant="secondary" className="text-xs h-4 px-1">
-                  {userRole === 'admin' ? t.admin : t.analyst}
+                  {userRole === 'admin' ? t.admin : userRole === 'farmer' ? t.farmer : t.analyst}
                 </Badge>
               </div>
             </Button>
@@ -122,7 +132,12 @@ export function Header({ language, onLanguageChange, userRole }: HeaderProps) {
             <DropdownMenuLabel>{t.profile}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>{t.settings}</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">{t.logout}</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-red-600"
+              onClick={onLogout}
+            >
+              {t.logout}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

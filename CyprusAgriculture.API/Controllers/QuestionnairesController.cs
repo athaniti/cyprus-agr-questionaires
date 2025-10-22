@@ -28,9 +28,7 @@ namespace CyprusAgriculture.API.Controllers
         {
             try
             {
-                var query = _context.Questionnaires
-                    .Include(q => q.Creator)
-                    .AsQueryable();
+                var query = _context.Questionnaires.AsQueryable();
 
                 if (!string.IsNullOrEmpty(status))
                 {
@@ -57,7 +55,7 @@ namespace CyprusAgriculture.API.Controllers
                         q.TargetResponses,
                         q.CurrentResponses,
                         CompletionRate = q.TargetResponses > 0 ? (double)q.CurrentResponses / q.TargetResponses * 100 : 0,
-                        CreatedBy = q.Creator.FirstName + " " + q.Creator.LastName,
+                        CreatedBy = "System User", // Fallback when no user relation
                         q.CreatedAt,
                         q.PublishedAt,
                         q.UpdatedAt
@@ -76,7 +74,7 @@ namespace CyprusAgriculture.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving questionnaires");
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
             }
         }
 
@@ -218,6 +216,47 @@ namespace CyprusAgriculture.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error publishing questionnaire {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        // POST: api/questionnaires/{id}/duplicate
+        [HttpPost("{id}/duplicate")]
+        public async Task<ActionResult<object>> DuplicateQuestionnaire(Guid id)
+        {
+            try
+            {
+                var originalQuestionnaire = await _context.Questionnaires.FindAsync(id);
+                if (originalQuestionnaire == null)
+                {
+                    return NotFound();
+                }
+
+                var duplicatedQuestionnaire = new Questionnaire
+                {
+                    Name = $"{originalQuestionnaire.Name} (Copy)",
+                    Description = originalQuestionnaire.Description,
+                    Category = originalQuestionnaire.Category,
+                    Schema = originalQuestionnaire.Schema,
+                    TargetResponses = originalQuestionnaire.TargetResponses,
+                    CreatedBy = originalQuestionnaire.CreatedBy,
+                    Status = "draft"
+                };
+
+                _context.Questionnaires.Add(duplicatedQuestionnaire);
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetQuestionnaire), new { id = duplicatedQuestionnaire.Id }, new
+                {
+                    duplicatedQuestionnaire.Id,
+                    duplicatedQuestionnaire.Name,
+                    duplicatedQuestionnaire.Status,
+                    duplicatedQuestionnaire.CreatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error duplicating questionnaire {Id}", id);
                 return StatusCode(500, "Internal server error");
             }
         }

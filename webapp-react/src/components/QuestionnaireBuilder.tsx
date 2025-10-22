@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { TableBuilder } from './TableBuilder';
+import { apiService } from '../services/api';
 
 interface QuestionnaireBuilderProps {
   language: 'el' | 'en';
@@ -68,6 +70,36 @@ interface Question {
     show: boolean;
     when: string;
     eq: string;
+  };
+  drillDown?: {
+    sourceQuestionId: string;
+    optionsMapping: Record<string, string[]>;
+  };
+  collapsed?: boolean;
+  tableConfig?: {
+    id: string;
+    name: string;
+    nameEn?: string;
+    description?: string;
+    columns: Array<{
+      id: string;
+      name: string;
+      nameEn?: string;
+      type: 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox';
+      required: boolean;
+      options?: string[];
+      validation?: {
+        min?: number;
+        max?: number;
+        pattern?: string;
+      };
+      code?: string;
+      category?: string;
+    }>;
+    minRows?: number;
+    maxRows?: number;
+    allowAddRows: boolean;
+    allowDeleteRows: boolean;
   };
 }
 
@@ -97,6 +129,7 @@ const translations = {
     multipleChoice: 'Πολλαπλή Επιλογή',
     checkbox: 'Πλαίσια Επιλογής',
     dropdown: 'Λίστα Επιλογής',
+    table: 'Πίνακας',
     fileUpload: 'Μεταφόρτωση Αρχείου',
     questionText: 'Κείμενο Ερώτησης',
     questionTextEn: 'Κείμενο Ερώτησης (EN)',
@@ -110,6 +143,15 @@ const translations = {
     conditional: 'Υπό Συνθήκη',
     minValue: 'Ελάχιστη Τιμή',
     maxValue: 'Μέγιστη Τιμή',
+    tableSettings: 'Ρυθμίσεις Πίνακα',
+    configureTable: 'Διαμόρφωση Πίνακα',
+    drillDown: 'Εξαρτημένες Επιλογές',
+    sourceQuestion: 'Πηγή Ερώτηση',
+    dependsOn: 'Εξαρτάται από',
+    expandAll: 'Ανάπτυξη Όλων',
+    collapseAll: 'Σύμπτυξη Όλων',
+    expand: 'Ανάπτυξη',
+    collapse: 'Σύμπτυξη',
     saveDraft: 'Αποθήκευση Προχείρου',
     preview: 'Προεπισκόπηση',
     publish: 'Δημοσίευση',
@@ -150,6 +192,7 @@ const translations = {
     multipleChoice: 'Multiple Choice',
     checkbox: 'Checkboxes',
     dropdown: 'Dropdown',
+    table: 'Table',
     fileUpload: 'File Upload',
     questionText: 'Question Text',
     questionTextEn: 'Question Text (EN)',
@@ -163,6 +206,15 @@ const translations = {
     conditional: 'Conditional',
     minValue: 'Minimum Value',
     maxValue: 'Maximum Value',
+    tableSettings: 'Table Settings',
+    configureTable: 'Configure Table',
+    drillDown: 'Dependent Options',
+    sourceQuestion: 'Source Question',
+    dependsOn: 'Depends on',
+    expandAll: 'Expand All',
+    collapseAll: 'Collapse All',
+    expand: 'Expand',
+    collapse: 'Collapse',
     saveDraft: 'Save Draft',
     preview: 'Preview',
     publish: 'Publish',
@@ -190,6 +242,7 @@ const questionTypeIcons: Record<string, any> = {
   multipleChoice: Circle,
   checkbox: CheckSquare,
   dropdown: ListChecks,
+  table: TableIcon,
   fileUpload: Upload,
 };
 
@@ -202,6 +255,34 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
   const [showPreview, setShowPreview] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
 
+  // Expand/Collapse functionality
+  const toggleQuestionCollapse = (id: string) => {
+    setQuestions(questions.map(q => 
+      q.id === id ? { ...q, collapsed: !q.collapsed } : q
+    ));
+  };
+
+  const expandAllQuestions = () => {
+    setQuestions(questions.map(q => ({ ...q, collapsed: false })));
+  };
+
+  const collapseAllQuestions = () => {
+    setQuestions(questions.map(q => ({ ...q, collapsed: true })));
+  };
+
+  // Drill down functionality
+  const getAvailableSourceQuestions = () => {
+    return questions.filter(q => 
+      ['multipleChoice', 'dropdown', 'select'].includes(q.type) && 
+      q.options.length > 0
+    );
+  };
+
+  const getDrillDownOptions = (sourceQuestionId: string, sourceValue: string) => {
+    const question = questions.find(q => q.id === sourceQuestionId);
+    return question?.drillDown?.optionsMapping[sourceValue] || [];
+  };
+
   const addQuestion = (type: string) => {
     const newQuestion: Question = {
       id: `q-${Date.now()}`,
@@ -210,6 +291,22 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
       required: false,
       options: ['multipleChoice', 'checkbox', 'dropdown'].includes(type) ? ['', ''] : [],
     };
+    
+    // Initialize table config for table type
+    if (type === 'table') {
+      newQuestion.tableConfig = {
+        id: `table-${Date.now()}`,
+        name: '',
+        nameEn: '',
+        description: '',
+        columns: [],
+        minRows: 1,
+        maxRows: 10,
+        allowAddRows: true,
+        allowDeleteRows: true,
+      };
+    }
+    
     setQuestions([...questions, newQuestion]);
     setEditingQuestion(newQuestion.id);
   };
@@ -301,20 +398,83 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
     }
   };
 
-  const handleSaveDraft = () => {
-    console.log('Saving draft:', { questionnaireName, description, category, questions });
-    alert(language === 'el' ? 'Το πρόχειρο αποθηκεύτηκε!' : 'Draft saved!');
+  const handleSaveDraft = async () => {
+    try {
+      const schema = JSON.stringify({
+        display: 'form',
+        components: questions.map(q => ({
+          type: q.type,
+          key: q.id,
+          label: q.text,
+          placeholder: q.placeholder,
+          description: q.description,
+          validate: { required: q.required },
+          options: q.options?.map(opt => ({ label: opt, value: opt })),
+          conditional: q.conditional,
+          drillDown: q.drillDown,
+          tableConfig: q.tableConfig
+        }))
+      });
+
+      await apiService.createQuestionnaire({
+        name: questionnaireName,
+        description: description,
+        category: category,
+        schema: schema,
+        targetResponses: 100, // Default target
+        createdBy: 'current-user-id' // Should come from auth context
+      });
+
+      alert(language === 'el' ? 'Το ερωτηματολόγιο αποθηκεύτηκε ως πρόχειρο!' : 'Questionnaire saved as draft!');
+    } catch (error) {
+      console.error('Failed to save questionnaire:', error);
+      alert(language === 'el' ? 'Σφάλμα κατά την αποθήκευση!' : 'Error saving questionnaire!');
+    }
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!questionnaireName || questions.length === 0) {
       alert(language === 'el' 
         ? 'Παρακαλώ συμπληρώστε το όνομα και προσθέστε τουλάχιστον μία ερώτηση' 
         : 'Please fill in the name and add at least one question');
       return;
     }
-    console.log('Publishing:', { questionnaireName, description, category, questions });
-    alert(language === 'el' ? 'Το ερωτηματολόγιο δημοσιεύτηκε!' : 'Questionnaire published!');
+
+    try {
+      const schema = JSON.stringify({
+        display: 'form',
+        components: questions.map(q => ({
+          type: q.type,
+          key: q.id,
+          label: q.text,
+          placeholder: q.placeholder,
+          description: q.description,
+          validate: { required: q.required },
+          options: q.options?.map(opt => ({ label: opt, value: opt })),
+          conditional: q.conditional,
+          drillDown: q.drillDown,
+          tableConfig: q.tableConfig
+        }))
+      });
+
+      const newQuestionnaire = await apiService.createQuestionnaire({
+        name: questionnaireName,
+        description: description,
+        category: category,
+        schema: schema,
+        targetResponses: 100,
+        createdBy: 'current-user-id'
+      });
+
+      // Publish it immediately
+      await apiService.publishQuestionnaire(newQuestionnaire.id);
+
+      alert(language === 'el' ? 'Το ερωτηματολόγιο δημοσιεύτηκε επιτυχώς!' : 'Questionnaire published successfully!');
+      onBack(); // Go back to questionnaires list
+    } catch (error) {
+      console.error('Failed to publish questionnaire:', error);
+      alert(language === 'el' ? 'Σφάλμα κατά την δημοσίευση!' : 'Error publishing questionnaire!');
+    }
   };
 
   return (
@@ -431,10 +591,32 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
           <Card className="rounded-2xl border-none shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>{t.questions}</CardTitle>
-                <Badge variant="secondary" className="rounded-lg">
-                  {questions.length} {language === 'el' ? 'ερωτήσεις' : 'questions'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <CardTitle>{t.questions}</CardTitle>
+                  <Badge variant="secondary" className="rounded-lg">
+                    {questions.length} {language === 'el' ? 'ερωτήσεις' : 'questions'}
+                  </Badge>
+                </div>
+                {questions.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={expandAllQuestions}
+                      className="rounded-xl"
+                    >
+                      {t.expandAll}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={collapseAllQuestions}
+                      className="rounded-xl"
+                    >
+                      {t.collapseAll}
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -461,12 +643,16 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
                             )}
                           </div>
 
-                          <Tabs defaultValue="basic" className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
+                          {!question.collapsed && (
+                            <Tabs defaultValue="basic" className="w-full">
+                            <TabsList className={`grid w-full ${question.type === 'table' ? 'grid-cols-4' : 'grid-cols-3'}`}>
                               <TabsTrigger value="basic">{language === 'el' ? 'Βασικά' : 'Basic'}</TabsTrigger>
                               <TabsTrigger value="options" disabled={!['multipleChoice', 'checkbox', 'dropdown'].includes(question.type)}>
                                 {language === 'el' ? 'Επιλογές' : 'Options'}
                               </TabsTrigger>
+                              {question.type === 'table' && (
+                                <TabsTrigger value="table">{t.tableSettings}</TabsTrigger>
+                              )}
                               <TabsTrigger value="settings">{t.settings}</TabsTrigger>
                             </TabsList>
 
@@ -547,6 +733,16 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
                               </Button>
                             </TabsContent>
 
+                            {question.type === 'table' && (
+                              <TabsContent value="table" className="space-y-3 mt-4">
+                                <TableBuilder
+                                  language={language}
+                                  config={question.tableConfig}
+                                  onChange={(config) => updateQuestion(question.id, 'tableConfig', config)}
+                                />
+                              </TabsContent>
+                            )}
+
                             <TabsContent value="settings" className="space-y-3 mt-4">
                               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <Label className="text-sm">{t.required}</Label>
@@ -583,10 +779,61 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
                                   </div>
                                 </div>
                               )}
+                              
+                              {/* Drill Down Configuration */}
+                              {['multipleChoice', 'dropdown', 'select'].includes(question.type) && (
+                                <div className="space-y-3">
+                                  <Label className="text-sm">{t.drillDown}</Label>
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">{t.sourceQuestion}</Label>
+                                    <Select
+                                      value={question.drillDown?.sourceQuestionId || ''}
+                                      onValueChange={(value) => {
+                                        if (value) {
+                                          updateQuestion(question.id, 'drillDown', {
+                                            sourceQuestionId: value,
+                                            optionsMapping: {}
+                                          });
+                                        } else {
+                                          updateQuestion(question.id, 'drillDown', undefined);
+                                        }
+                                      }}
+                                    >
+                                      <SelectTrigger className="rounded-xl">
+                                        <SelectValue placeholder={t.selectCategory} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="">{language === 'el' ? 'Καμία' : 'None'}</SelectItem>
+                                        {getAvailableSourceQuestions()
+                                          .filter(q => q.id !== question.id)
+                                          .map(q => (
+                                            <SelectItem key={q.id} value={q.id}>
+                                              {q.text || q.textEn || `Question ${questions.indexOf(q) + 1}`}
+                                            </SelectItem>
+                                          ))
+                                        }
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              )}
                             </TabsContent>
                           </Tabs>
+                          )}
 
                           <div className="flex gap-1 pt-2 border-t">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg"
+                              onClick={() => toggleQuestionCollapse(question.id)}
+                              title={question.collapsed ? t.expand : t.collapse}
+                            >
+                              {question.collapsed ? 
+                                <Plus className="h-4 w-4" /> : 
+                                <GripVertical className="h-4 w-4 rotate-90" />
+                              }
+                            </Button>
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -723,6 +970,19 @@ export function QuestionnaireBuilder({ language, onBack }: QuestionnaireBuilderP
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+                {question.type === 'table' && question.tableConfig && (
+                  <div className="border rounded-xl p-4">
+                    <div className="mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        {t.table}: {question.tableConfig.name || 'Unnamed Table'}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {question.tableConfig.columns.length} {language === 'el' ? 'στήλες' : 'columns'} • 
+                      {question.tableConfig.minRows}-{question.tableConfig.maxRows} {language === 'el' ? 'γραμμές' : 'rows'}
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

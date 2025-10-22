@@ -10,6 +10,19 @@ namespace CyprusAgriculture.API.Data
         {
         }
 
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                // This will only be used if no options are provided (shouldn't happen in our case)
+                optionsBuilder.UseNpgsql();
+            }
+            
+            // Suppress the pending model changes warning for development
+            optionsBuilder.ConfigureWarnings(warnings => 
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        }
+
         public DbSet<User> Users { get; set; }
         public DbSet<Questionnaire> Questionnaires { get; set; }
         public DbSet<QuestionnaireResponse> QuestionnaireResponses { get; set; }

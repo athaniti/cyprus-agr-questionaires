@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import FormioFormBuilder from './components/FormioFormBuilder';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { FormBuilderComponent } from './components/FormBuilder';
 import { FormPreview } from './components/FormPreview';
 
 function AppContent() {
@@ -412,70 +412,25 @@ function AppContent() {
 
       {/* Form Builder Modal */}
       {showFormBuilder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4">
-            <div className="px-8 py-6 border-b border-gray-200" style={{ backgroundColor: '#004B87' }}>
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white">
-                  🛠️ {formBuilderMode === 'create' 
-                    ? (language === 'el' ? 'Δημιουργία Ερωτηματολογίου' : 'Create Questionnaire')
-                    : (language === 'el' ? 'Επεξεργασία Ερωτηματολογίου' : 'Edit Questionnaire')
-                  }
-                  {selectedQuestionnaire?.name && (
-                    <span className="ml-2 text-blue-200">- {selectedQuestionnaire.name}</span>
-                  )}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowFormBuilder(false);
-                    setNewQuestionnaireName('');
-                    setSelectedQuestionnaire(null);
-                  }}
-                  className="text-white hover:text-blue-200 text-2xl"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            <div className="h-[calc(90vh-80px)]">
-              <FormioFormBuilder
-                form={formBuilderMode === 'edit' ? selectedQuestionnaire?.schema : { components: [] }}
-                onFormChange={(formSchema: any) => {
-                  console.log('Form changed:', formSchema);
-                }}
-                language={language}
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-4">
-              <button
-                onClick={() => {
-                  setShowFormBuilder(false);
-                  setNewQuestionnaireName('');
-                  setSelectedQuestionnaire(null);
-                }}
-                className="px-6 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {language === 'el' ? 'Ακύρωση' : 'Cancel'}
-              </button>
-              <button
-                onClick={() => {
-                  console.log('Questionnaire saved');
-                  alert(language === 'el' ? 'Ερωτηματολόγιο αποθηκεύτηκε!' : 'Questionnaire saved!');
-                  setShowFormBuilder(false);
-                  setNewQuestionnaireName('');
-                  setSelectedQuestionnaire(null);
-                }}
-                className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                style={{ backgroundColor: '#004B87' }}
-              >
-                {language === 'el' ? 'Αποθήκευση' : 'Save'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <FormBuilderComponent
+          initialForm={formBuilderMode === 'edit' ? selectedQuestionnaire : undefined}
+          onSave={(formData) => {
+            console.log('Questionnaire saved:', formData);
+            setQuestionnaires(prev => [...prev, formData]);
+            alert(language === 'el' ? 'Ερωτηματολόγιο αποθηκεύτηκε!' : 'Questionnaire saved!');
+            setShowFormBuilder(false);
+            setNewQuestionnaireName('');
+            setSelectedQuestionnaire(null);
+          }}
+          onCancel={() => {
+            setShowFormBuilder(false);
+            setNewQuestionnaireName('');
+            setSelectedQuestionnaire(null);
+          }}
+          language={language}
+          mode={formBuilderMode}
+          questionnaireName={newQuestionnaireName}
+        />
       )}
 
       {/* Form Preview Modal */}
