@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import FormioFormBuilder from './components/FormioFormBuilder';
+import FormioBuilder from './components/FormioBuilderNew';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -439,7 +439,7 @@ function AppContent() {
             </div>
 
             <div className="h-[calc(90vh-80px)]">
-              <FormioFormBuilder
+              <FormioBuilder
                 form={formBuilderMode === 'edit' ? selectedQuestionnaire?.schema : { components: [] }}
                 onFormChange={(formSchema: any) => {
                   console.log('Form changed:', formSchema);

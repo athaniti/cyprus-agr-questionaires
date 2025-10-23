@@ -52,9 +52,15 @@
     build: {
       target: 'esnext',
       outDir: 'build',
+      commonjsOptions: {
+        include: [/formiojs/, /node_modules/]
+      }
     },
     server: {
       port: 3000,
       open: true,
     },
+    optimizeDeps: {
+      include: ['formiojs']
+  },
   });
