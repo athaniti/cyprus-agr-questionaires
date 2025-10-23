@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import FormioBuilder from './components/FormioBuilderNew';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { FormPreview } from './components/FormPreview';
+import { FormBuilder } from "@formio/react";
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -439,13 +439,14 @@ function AppContent() {
             </div>
 
             <div className="h-[calc(90vh-80px)]">
-              <FormioBuilder
+              {/* <FormioBuilder
                 form={formBuilderMode === 'edit' ? selectedQuestionnaire?.schema : { components: [] }}
                 onFormChange={(formSchema: any) => {
                   console.log('Form changed:', formSchema);
                 }}
                 language={language}
-              />
+              /> */}
+              <FormBuilder initialForm={{components:[]}} />,
             </div>
 
             {/* Action Buttons */}
