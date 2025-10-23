@@ -5,6 +5,39 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { FormPreview } from './components/FormPreview';
 import { FormBuilder } from "@formio/react";
+import '@formio/js/dist/formio.full.min.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+// Μόνο visibility CSS - ΧΩΡΙΣ styling
+const formBuilderStyles = `
+  .builder-sidebar {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  .builder-sidebar .card-body {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  .builder-sidebar .collapse.show {
+    display: block !important;
+  }
+  
+  .builder-sidebar .btn {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+`;
+
+// Προσθήκη styles στο head
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = formBuilderStyles;
+  document.head.appendChild(styleElement);
+}
 
 function AppContent() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -412,9 +445,9 @@ function AppContent() {
 
       {/* Form Builder Modal */}
       {showFormBuilder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4">
-            <div className="px-8 py-6 border-b border-gray-200" style={{ backgroundColor: '#004B87' }}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4 flex flex-col" style={{ zIndex: 10000 }}>
+            <div className="px-8 py-6 border-b border-gray-200 flex-shrink-0" style={{ backgroundColor: '#004B87' }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white">
                   🛠️ {formBuilderMode === 'create' 
@@ -438,26 +471,32 @@ function AppContent() {
               </div>
             </div>
 
-            <div className="h-[calc(90vh-80px)]">
-              {/* <FormioBuilder
-                form={formBuilderMode === 'edit' ? selectedQuestionnaire?.schema : { components: [] }}
-                onFormChange={(formSchema: any) => {
-                  console.log('Form changed:', formSchema);
-                }}
-                language={language}
-              /> */}
-              <FormBuilder initialForm={{components:[]}} />,
+            <div className="flex-1 overflow-auto bg-gray-100 p-4">
+              <div className="h-full bg-white rounded-lg shadow-sm" style={{ minHeight: '600px', height: '100%' }}>
+                <FormBuilder 
+                  initialForm={{ 
+                    components: [],
+                    display: 'form'
+                  }}
+                  onChange={(form: any) => {
+                    console.log('Form changed:', form);
+                  }}
+                  onBuilderReady={(builder: any) => {
+                    console.log('FormBuilder ready:', builder);
+                  }}
+                />
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-4">
+            <div className="px-8 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-4 flex-shrink-0">
               <button
                 onClick={() => {
                   setShowFormBuilder(false);
                   setNewQuestionnaireName('');
                   setSelectedQuestionnaire(null);
                 }}
-                className="px-6 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition-colors"
               >
                 {language === 'el' ? 'Ακύρωση' : 'Cancel'}
               </button>
@@ -469,8 +508,7 @@ function AppContent() {
                   setNewQuestionnaireName('');
                   setSelectedQuestionnaire(null);
                 }}
-                className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                style={{ backgroundColor: '#004B87' }}
+                className="bg-[#004B87] text-white px-6 py-2 rounded-md hover:bg-blue-800 transition-colors"
               >
                 {language === 'el' ? 'Αποθήκευση' : 'Save'}
               </button>
