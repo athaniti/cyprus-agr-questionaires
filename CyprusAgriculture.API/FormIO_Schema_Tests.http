@@ -1,0 +1,50 @@
+### FormIO Schema API Tests
+### Test creating a questionnaire with FormIO schema
+
+POST {{baseUrl}}/api/questionnaires/schema
+Content-Type: application/json
+
+{
+  "name": "Cyprus Farm Survey 2025",
+  "description": "Annual farm survey for Cyprus agriculture ministry",
+  "category": "Livestock",
+  "targetResponses": 100,
+  "createdBy": "00000000-0000-0000-0000-000000000001",
+  "schema": "{\n  \"display\": \"form\",\n  \"components\": [\n    {\n      \"label\": \"Farm Information\",\n      \"tableView\": false,\n      \"key\": \"farmInfo\",\n      \"type\": \"panel\",\n      \"input\": false,\n      \"components\": [\n        {\n          \"label\": \"Farm Name\",\n          \"tableView\": true,\n          \"validate\": {\n            \"required\": true\n          },\n          \"key\": \"farmName\",\n          \"type\": \"textfield\",\n          \"input\": true\n        },\n        {\n          \"label\": \"Farm Size (hectares)\",\n          \"mask\": false,\n          \"tableView\": false,\n          \"delimiter\": false,\n          \"requireDecimal\": false,\n          \"inputFormat\": \"plain\",\n          \"validate\": {\n            \"required\": true,\n            \"min\": 0\n          },\n          \"key\": \"farmSize\",\n          \"type\": \"number\",\n          \"input\": true\n        },\n        {\n          \"label\": \"Primary Crop Type\",\n          \"widget\": \"choicesjs\",\n          \"tableView\": true,\n          \"data\": {\n            \"values\": [\n              {\n                \"label\": \"Wheat\",\n                \"value\": \"wheat\"\n              },\n              {\n                \"label\": \"Barley\",\n                \"value\": \"barley\"\n              },\n              {\n                \"label\": \"Citrus Fruits\",\n                \"value\": \"citrus\"\n              },\n              {\n                \"label\": \"Olives\",\n                \"value\": \"olives\"\n              },\n              {\n                \"label\": \"Vegetables\",\n                \"value\": \"vegetables\"\n              }\n            ]\n          },\n          \"validate\": {\n            \"required\": true\n          },\n          \"key\": \"primaryCrop\",\n          \"type\": \"select\",\n          \"input\": true\n        }\n      ]\n    },\n    {\n      \"label\": \"Livestock Information\",\n      \"tableView\": false,\n      \"key\": \"livestockInfo\",\n      \"type\": \"panel\",\n      \"input\": false,\n      \"components\": [\n        {\n          \"label\": \"Do you have livestock?\",\n          \"tableView\": false,\n          \"values\": [\n            {\n              \"label\": \"Yes\",\n              \"value\": \"yes\",\n              \"shortcut\": \"\"\n            },\n            {\n              \"label\": \"No\",\n              \"value\": \"no\",\n              \"shortcut\": \"\"\n            }\n          ],\n          \"validate\": {\n            \"required\": true\n          },\n          \"key\": \"hasLivestock\",\n          \"type\": \"radio\",\n          \"input\": true\n        },\n        {\n          \"label\": \"Number of Cattle\",\n          \"mask\": false,\n          \"tableView\": false,\n          \"delimiter\": false,\n          \"requireDecimal\": false,\n          \"inputFormat\": \"plain\",\n          \"validate\": {\n            \"min\": 0\n          },\n          \"conditional\": {\n            \"show\": true,\n            \"when\": \"hasLivestock\",\n            \"eq\": \"yes\"\n          },\n          \"key\": \"cattleCount\",\n          \"type\": \"number\",\n          \"input\": true\n        },\n        {\n          \"label\": \"Number of Sheep/Goats\",\n          \"mask\": false,\n          \"tableView\": false,\n          \"delimiter\": false,\n          \"requireDecimal\": false,\n          \"inputFormat\": \"plain\",\n          \"validate\": {\n            \"min\": 0\n          },\n          \"conditional\": {\n            \"show\": true,\n            \"when\": \"hasLivestock\",\n            \"eq\": \"yes\"\n          },\n          \"key\": \"sheepGoatCount\",\n          \"type\": \"number\",\n          \"input\": true\n        }\n      ]\n    },\n    {\n      \"type\": \"button\",\n      \"label\": \"Submit\",\n      \"key\": \"submit\",\n      \"disableOnInvalid\": true,\n      \"input\": true,\n      \"tableView\": false\n    }\n  ]\n}"
+}
+
+### Test retrieving questionnaire schema
+GET {{baseUrl}}/api/questionnaires/{{questionnaireId}}/schema
+
+### Test updating questionnaire schema
+PUT {{baseUrl}}/api/questionnaires/{{questionnaireId}}/schema
+Content-Type: application/json
+
+{
+  "schema": "{\n  \"display\": \"form\",\n  \"components\": [\n    {\n      \"label\": \"Updated Farm Information\",\n      \"tableView\": false,\n      \"key\": \"farmInfo\",\n      \"type\": \"panel\",\n      \"input\": false,\n      \"components\": [\n        {\n          \"label\": \"Farm Name\",\n          \"tableView\": true,\n          \"validate\": {\n            \"required\": true\n          },\n          \"key\": \"farmName\",\n          \"type\": \"textfield\",\n          \"input\": true\n        },\n        {\n          \"label\": \"Farm Size (hectares)\",\n          \"mask\": false,\n          \"tableView\": false,\n          \"delimiter\": false,\n          \"requireDecimal\": false,\n          \"inputFormat\": \"plain\",\n          \"validate\": {\n            \"required\": true,\n            \"min\": 0\n          },\n          \"key\": \"farmSize\",\n          \"type\": \"number\",\n          \"input\": true\n        },\n        {\n          \"label\": \"Location (Municipality)\",\n          \"tableView\": true,\n          \"validate\": {\n            \"required\": true\n          },\n          \"key\": \"municipality\",\n          \"type\": \"textfield\",\n          \"input\": true\n        }\n      ]\n    },\n    {\n      \"type\": \"button\",\n      \"label\": \"Submit Survey\",\n      \"key\": \"submit\",\n      \"disableOnInvalid\": true,\n      \"input\": true,\n      \"tableView\": false\n    }\n  ]\n}"
+}
+
+### Test creating a simple questionnaire with basic schema
+POST {{baseUrl}}/api/questionnaires/schema
+Content-Type: application/json
+
+{
+  "name": "Simple Contact Form",
+  "description": "Basic contact information form",
+  "category": "General",
+  "targetResponses": 50,
+  "createdBy": "00000000-0000-0000-0000-000000000001",
+  "schema": "{\n  \"display\": \"form\",\n  \"components\": [\n    {\n      \"label\": \"Name\",\n      \"tableView\": true,\n      \"validate\": {\n        \"required\": true\n      },\n      \"key\": \"name\",\n      \"type\": \"textfield\",\n      \"input\": true\n    },\n    {\n      \"label\": \"Email\",\n      \"tableView\": true,\n      \"validate\": {\n        \"required\": true,\n        \"pattern\": \"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}$\"\n      },\n      \"key\": \"email\",\n      \"type\": \"email\",\n      \"input\": true\n    },\n    {\n      \"label\": \"Message\",\n      \"autoExpand\": false,\n      \"tableView\": true,\n      \"validate\": {\n        \"required\": true\n      },\n      \"key\": \"message\",\n      \"type\": \"textarea\",\n      \"input\": true\n    },\n    {\n      \"type\": \"button\",\n      \"label\": \"Submit\",\n      \"key\": \"submit\",\n      \"disableOnInvalid\": true,\n      \"input\": true,\n      \"tableView\": false\n    }\n  ]\n}"
+}
+
+### Test error handling - invalid JSON schema
+PUT {{baseUrl}}/api/questionnaires/{{questionnaireId}}/schema
+Content-Type: application/json
+
+{
+  "schema": "{ invalid json"
+}
+
+### Variables for testing
+@baseUrl = https://localhost:5001
+@questionnaireId = replace-with-actual-questionnaire-id

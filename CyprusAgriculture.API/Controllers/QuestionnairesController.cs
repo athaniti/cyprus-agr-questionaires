@@ -317,6 +317,128 @@ namespace CyprusAgriculture.API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        // GET: api/questionnaires/{id}/schema
+        [HttpGet("{id}/schema")]
+        public async Task<ActionResult<object>> GetQuestionnaireSchema(Guid id)
+        {
+            try
+            {
+                var questionnaire = await _context.Questionnaires
+                    .Where(q => q.Id == id)
+                    .Select(q => new { q.Id, q.Name, q.Schema, q.UpdatedAt })
+                    .FirstOrDefaultAsync();
+
+                if (questionnaire == null)
+                {
+                    return NotFound(new { error = "Questionnaire not found" });
+                }
+
+                return Ok(new
+                {
+                    questionnaire.Id,
+                    questionnaire.Name,
+                    Schema = System.Text.Json.JsonSerializer.Deserialize<object>(questionnaire.Schema),
+                    questionnaire.UpdatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving schema for questionnaire {Id}", id);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // PUT: api/questionnaires/{id}/schema
+        [HttpPut("{id}/schema")]
+        public async Task<IActionResult> UpdateQuestionnaireSchema(Guid id, [FromBody] UpdateSchemaRequest request)
+        {
+            try
+            {
+                var questionnaire = await _context.Questionnaires.FindAsync(id);
+                if (questionnaire == null)
+                {
+                    return NotFound(new { error = "Questionnaire not found" });
+                }
+
+                // Validate that the schema is valid JSON
+                try
+                {
+                    System.Text.Json.JsonSerializer.Deserialize<object>(request.Schema);
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    return BadRequest(new { error = "Invalid JSON schema format" });
+                }
+
+                questionnaire.Schema = request.Schema;
+                questionnaire.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Schema updated for questionnaire {Id}", id);
+
+                return Ok(new
+                {
+                    message = "Schema updated successfully",
+                    questionnaire.Id,
+                    questionnaire.UpdatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating schema for questionnaire {Id}", id);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // POST: api/questionnaires/schema
+        [HttpPost("schema")]
+        public async Task<ActionResult<object>> CreateQuestionnaireWithSchema([FromBody] CreateQuestionnaireWithSchemaRequest request)
+        {
+            try
+            {
+                // Validate that the schema is valid JSON
+                try
+                {
+                    System.Text.Json.JsonSerializer.Deserialize<object>(request.Schema);
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    return BadRequest(new { error = "Invalid JSON schema format" });
+                }
+
+                var questionnaire = new Questionnaire
+                {
+                    Name = request.Name,
+                    Description = request.Description,
+                    Category = request.Category,
+                    Schema = request.Schema,
+                    TargetResponses = request.TargetResponses,
+                    CreatedBy = request.CreatedBy, // In real app, get from JWT token
+                    Status = "draft"
+                };
+
+                _context.Questionnaires.Add(questionnaire);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Questionnaire created with schema: {Id}", questionnaire.Id);
+
+                return CreatedAtAction(nameof(GetQuestionnaire), new { id = questionnaire.Id }, new
+                {
+                    questionnaire.Id,
+                    questionnaire.Name,
+                    questionnaire.Status,
+                    questionnaire.CreatedAt,
+                    message = "Questionnaire created successfully with FormIO schema"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating questionnaire with schema");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
     }
 
     // DTOs
@@ -337,5 +459,20 @@ namespace CyprusAgriculture.API.Controllers
         public string? Category { get; set; }
         public string? Schema { get; set; }
         public int? TargetResponses { get; set; }
+    }
+
+    public class CreateQuestionnaireWithSchemaRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Category { get; set; } = string.Empty;
+        public string Schema { get; set; } = "{}";
+        public int TargetResponses { get; set; } = 0;
+        public Guid CreatedBy { get; set; }
+    }
+
+    public class UpdateSchemaRequest
+    {
+        public string Schema { get; set; } = string.Empty;
     }
 }
