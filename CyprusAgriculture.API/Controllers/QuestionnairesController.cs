@@ -28,6 +28,9 @@ namespace CyprusAgriculture.API.Controllers
         {
             try
             {
+                _logger.LogInformation("GetQuestionnaires called with status={Status}, category={Category}, page={Page}, pageSize={PageSize}", 
+                    status, category, page, pageSize);
+                
                 var query = _context.Questionnaires.AsQueryable();
 
                 if (!string.IsNullOrEmpty(status))

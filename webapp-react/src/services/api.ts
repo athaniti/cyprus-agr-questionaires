@@ -75,6 +75,7 @@ class ApiService {
 
   constructor() {
     this.baseUrl = API_BASE_URL;
+    console.log('ApiService initialized with baseUrl:', this.baseUrl);
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
@@ -156,16 +157,32 @@ class ApiService {
     totalPages: number;
   }> {
     try {
+      console.log('Fetching questionnaires from API...');
       const params = new URLSearchParams();
       if (filters?.status) params.append('status', filters.status);
       if (filters?.category) params.append('category', filters.category);
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString());
-
-      const response = await fetch(`${this.baseUrl}/questionnaires?${params}`);
-      return this.handleResponse(response);
+      
+      const url = `${this.baseUrl}/questionnaires?${params}`;
+      console.log('Requesting URL:', url);
+      
+      const response = await fetch(url);
+      console.log('API Response status:', response.status);
+      console.log('API Response ok:', response.ok);
+      
+      const result = await this.handleResponse(response);
+      console.log('Questionnaires fetched successfully:', result);
+      return result as {
+        data: Questionnaire[];
+        totalCount: number;
+        page: number;
+        pageSize: number;
+        totalPages: number;
+      };
     } catch (error) {
-      console.error('Failed to fetch questionnaires:', error);
+      console.error('Failed to fetch questionnaires from API:', error);
+      console.log('Falling back to localStorage...');
       // Fallback to mock data
       const mockQuestionnaires: Questionnaire[] = [
         {
@@ -413,6 +430,159 @@ class ApiService {
     } catch (error) {
       console.error('Failed to publish questionnaire:', error);
       throw error;
+    }
+  }
+
+  // FormIO Schema specific methods
+  async getQuestionnaireSchema(id: string): Promise<{
+    id: string;
+    name: string;
+    schema: any;
+    updatedAt: string;
+  }> {
+    try {
+      console.log(`Fetching schema for questionnaire ID: ${id}`);
+      const response = await fetch(`${this.baseUrl}/questionnaires/${id}/schema`);
+      console.log('Schema API response status:', response.status);
+      const result = await this.handleResponse(response);
+      console.log('Schema API result:', result);
+      return result as {
+        id: string;
+        name: string;
+        schema: any;
+        updatedAt: string;
+      };
+    } catch (error) {
+      console.error('Failed to fetch questionnaire schema:', error);
+      
+      // Fallback - try to get from localStorage
+      const saved = localStorage.getItem('questionnaires');
+      if (saved) {
+        const questionnaires = JSON.parse(saved);
+        const questionnaire = questionnaires.find((q: any) => q.id === id);
+        if (questionnaire && questionnaire.schema) {
+          return {
+            id: questionnaire.id,
+            name: questionnaire.name,
+            schema: questionnaire.schema,
+            updatedAt: questionnaire.updatedAt || questionnaire.createdAt
+          };
+        }
+      }
+      
+      throw error;
+    }
+  }
+
+  async updateQuestionnaireSchema(id: string, schema: any): Promise<{
+    message: string;
+    id: string;
+    updatedAt: string;
+  }> {
+    try {
+      console.log(`Updating schema for questionnaire ID: ${id}`);
+      console.log('Schema to update:', schema);
+      const schemaString = typeof schema === 'string' ? schema : JSON.stringify(schema);
+      console.log('Schema string length:', schemaString.length);
+      
+      const response = await fetch(`${this.baseUrl}/questionnaires/${id}/schema`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          schema: schemaString
+        }),
+      });
+      console.log('Update schema API response status:', response.status);
+      const result = await this.handleResponse(response);
+      console.log('Update schema API result:', result);
+      return result as {
+        message: string;
+        id: string;
+        updatedAt: string;
+      };
+    } catch (error) {
+      console.error('Failed to update questionnaire schema:', error);
+      
+      // Fallback - update in localStorage
+      const saved = localStorage.getItem('questionnaires');
+      if (saved) {
+        const questionnaires = JSON.parse(saved);
+        const index = questionnaires.findIndex((q: any) => q.id === id);
+        if (index >= 0) {
+          questionnaires[index].schema = schema;
+          questionnaires[index].updatedAt = new Date().toISOString();
+          localStorage.setItem('questionnaires', JSON.stringify(questionnaires));
+          
+          return {
+            message: 'Schema updated successfully',
+            id: id,
+            updatedAt: questionnaires[index].updatedAt
+          };
+        }
+      }
+      
+      throw error;
+    }
+  }
+
+  async createQuestionnaireWithSchema(data: {
+    name: string;
+    description?: string;
+    category: string;
+    schema: any;
+    targetResponses: number;
+    createdBy: string;
+  }): Promise<{
+    id: string;
+    name: string;
+    status: string;
+    createdAt: string;
+    message: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/questionnaires/schema`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          schema: typeof data.schema === 'string' ? data.schema : JSON.stringify(data.schema)
+        }),
+      });
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Failed to create questionnaire with schema:', error);
+      
+      // Fallback - save to localStorage
+      const questionnaire = {
+        id: Date.now().toString(),
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        status: 'draft',
+        targetResponses: data.targetResponses,
+        currentResponses: 0,
+        completionRate: 0,
+        createdBy: data.createdBy,
+        createdAt: new Date().toISOString(),
+        schema: data.schema
+      };
+      
+      const saved = localStorage.getItem('questionnaires');
+      const questionnaires = saved ? JSON.parse(saved) : [];
+      questionnaires.push(questionnaire);
+      localStorage.setItem('questionnaires', JSON.stringify(questionnaires));
+      
+      return {
+        id: questionnaire.id,
+        name: questionnaire.name,
+        status: questionnaire.status,
+        createdAt: questionnaire.createdAt,
+        message: 'Questionnaire created successfully with FormIO schema'
+      };
     }
   }
 }

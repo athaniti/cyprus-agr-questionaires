@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface FormBuilderComponentProps {
   initialForm?: any;
@@ -35,11 +36,74 @@ export function FormBuilderComponent({
   mode,
   questionnaireName
 }: FormBuilderComponentProps) {
-  const [components, setComponents] = useState<FormComponent[]>(
-    initialForm?.components || []
-  );
+  const [components, setComponents] = useState<FormComponent[]>([]);
   const [selectedComponent, setSelectedComponent] = useState<FormComponent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSchema, setIsLoadingSchema] = useState(false);
+  const { user } = useAuth();
+
+  // Load schema when editing an existing questionnaire
+  useEffect(() => {
+    const loadSchema = async () => {
+      console.log('LoadSchema called with:', { mode, initialForm: initialForm?.id });
+      
+      if (mode === 'edit' && initialForm?.id) {
+        setIsLoadingSchema(true);
+        try {
+          console.log('Calling getQuestionnaireSchema for ID:', initialForm.id);
+          const schemaData = await apiService.getQuestionnaireSchema(initialForm.id);
+          console.log('Loaded schema data:', schemaData);
+          console.log('Schema structure:', schemaData.schema);
+          
+          // Parse the schema and extract components
+          if (schemaData.schema && schemaData.schema.components) {
+            console.log('Found schema components:', schemaData.schema.components);
+            
+            // Filter out submit buttons and convert components
+            const formComponents = schemaData.schema.components.filter((comp: any) => comp.type !== 'button');
+            console.log('Filtered components (no buttons):', formComponents);
+            
+            const loadedComponents = formComponents.map((comp: any) => {
+              console.log('Converting component:', comp);
+              return {
+                id: comp.key || comp.id || `component_${Date.now()}_${Math.random()}`,
+                type: comp.type,
+                label: comp.label || 'Untitled',
+                required: comp.validate?.required || false,
+                options: comp.data?.values ? comp.data.values.map((v: any) => v.label || v.value) : 
+                         comp.values ? comp.values.map((v: any) => v.label || v.value) : undefined,
+                columns: comp.components ? comp.components.map((col: any) => ({
+                  label: col.label,
+                  type: col.type,
+                  required: col.validate?.required || false,
+                  options: col.data?.values ? col.data.values.map((v: any) => v.label || v.value) : undefined
+                })) : undefined,
+                rows: comp.rows
+              };
+            });
+            console.log('Converted components:', loadedComponents);
+            setComponents(loadedComponents);
+          } else if (initialForm.components) {
+            // Fallback to initialForm components if available
+            setComponents(initialForm.components);
+          }
+        } catch (error) {
+          console.error('Failed to load schema:', error);
+          // Fallback to initialForm components if API fails
+          if (initialForm.components) {
+            setComponents(initialForm.components);
+          }
+        } finally {
+          setIsLoadingSchema(false);
+        }
+      } else if (initialForm?.components) {
+        // For create mode or when components are already provided
+        setComponents(initialForm.components);
+      }
+    };
+
+    loadSchema();
+  }, [mode, initialForm]);
 
   const translations = {
     el: {
@@ -140,28 +204,123 @@ export function FormBuilderComponent({
   };
 
   const handleSave = async () => {
+    console.log('HandleSave called with components:', components);
+    console.log('Mode:', mode, 'InitialForm:', initialForm);
+    
     setIsLoading(true);
     try {
+      // Convert components to FormIO schema format
+      const formIOComponents = components.map(component => {
+        const baseComponent: any = {
+          key: component.id,
+          type: component.type,
+          label: component.label,
+          input: component.type !== 'panel',
+          tableView: true
+        };
+
+        // Add validation if required
+        if (component.required) {
+          baseComponent.validate = { required: true };
+        }
+
+        // Handle different component types
+        switch (component.type) {
+          case 'select':
+          case 'radio':
+          case 'checkbox':
+            if (component.options && component.options.length > 0) {
+              baseComponent.data = {
+                values: component.options.map(option => ({
+                  label: option,
+                  value: option.toLowerCase().replace(/\s+/g, '_')
+                }))
+              };
+            }
+            if (component.type === 'select') {
+              baseComponent.widget = 'choicesjs';
+            }
+            if (component.type === 'radio') {
+              baseComponent.values = component.options?.map(option => ({
+                label: option,
+                value: option.toLowerCase().replace(/\s+/g, '_')
+              })) || [];
+            }
+            break;
+          case 'table':
+            if (component.columns) {
+              baseComponent.components = component.columns.map(col => ({
+                key: col.label.toLowerCase().replace(/\s+/g, '_'),
+                type: col.type,
+                label: col.label,
+                input: true,
+                tableView: true,
+                validate: col.required ? { required: true } : {}
+              }));
+            }
+            baseComponent.rows = component.rows || 3;
+            break;
+          case 'textarea':
+            baseComponent.autoExpand = false;
+            break;
+          case 'number':
+            baseComponent.mask = false;
+            baseComponent.delimiter = false;
+            baseComponent.requireDecimal = false;
+            baseComponent.inputFormat = 'plain';
+            break;
+          case 'email':
+            baseComponent.validate = {
+              ...baseComponent.validate,
+              pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+            };
+            break;
+        }
+
+        return baseComponent;
+      });
+
+      // Add submit button
+      formIOComponents.push({
+        type: 'button',
+        label: language === 'el' ? 'Υποβολή' : 'Submit',
+        key: 'submit',
+        disableOnInvalid: true,
+        input: true,
+        tableView: false
+      });
+
+      const formIOSchema = {
+        display: 'form',
+        components: formIOComponents
+      };
+
+      console.log('Generated FormIO Schema:', formIOSchema);
+
       if (mode === 'create') {
-        const result = await apiService.saveQuestionnaireStructure({
+        const result = await apiService.createQuestionnaireWithSchema({
           name: questionnaireName || 'Untitled Questionnaire',
-          components: components,
-          language: language
+          description: `Questionnaire created with ${components.length} questions`,
+          category: 'general',
+          schema: formIOSchema,
+          targetResponses: 100,
+          createdBy: user?.id || '00000000-0000-0000-0000-000000000001' // Use actual user ID or fallback
         });
         console.log('Questionnaire created:', result);
         await onSave(result);
       } else {
-        // Edit mode
-        const result = await apiService.updateQuestionnaireStructure(
+        // Edit mode - update schema only
+        const result = await apiService.updateQuestionnaireSchema(
           initialForm?.id || 'temp',
-          {
-            name: questionnaireName || 'Untitled Questionnaire',
-            components: components,
-            language: language
-          }
+          formIOSchema
         );
-        console.log('Questionnaire updated:', result);
-        await onSave(result);
+        console.log('Schema updated:', result);
+        await onSave({
+          ...initialForm,
+          schema: formIOSchema,
+          components: components,
+          updatedAt: result.updatedAt
+        });
       }
     } catch (error) {
       console.error('Error saving questionnaire:', error);
@@ -268,14 +427,14 @@ export function FormBuilderComponent({
             <button
               onClick={onCancel}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              disabled={isLoading}
+              disabled={isLoading || isLoadingSchema}
             >
               {t.cancel}
             </button>
             <button
               onClick={handleSave}
-              disabled={isLoading}
-              className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
+              disabled={isLoading || isLoadingSchema}
+              className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ backgroundColor: '#004B87' }}
             >
               {isLoading ? t.saving : t.save}
@@ -283,10 +442,23 @@ export function FormBuilderComponent({
           </div>
         </div>
 
+        {/* Loading Schema Indicator */}
+        {isLoadingSchema && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">
+                {language === 'el' ? 'Φόρτωση σχήματος...' : 'Loading schema...'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
-        <div className="flex-1 overflow-hidden flex">
-          {/* Left Panel - Question Types */}
-          <div className="w-1/4 border-r border-gray-200 p-4 overflow-y-auto">
+        {!isLoadingSchema && (
+          <div className="flex-1 overflow-hidden flex">
+            {/* Left Panel - Question Types */}
+            <div className="w-1/4 border-r border-gray-200 p-4 overflow-y-auto">
             <h3 className="font-semibold text-gray-900 mb-4">{t.questionTypes}</h3>
             <div className="space-y-2">
               {questionTypes.map((type) => (
@@ -485,8 +657,8 @@ export function FormBuilderComponent({
                 )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

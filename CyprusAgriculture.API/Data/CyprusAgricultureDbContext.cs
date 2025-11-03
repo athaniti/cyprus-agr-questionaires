@@ -53,6 +53,11 @@ namespace CyprusAgriculture.API.Data
                     .WithMany(u => u.CreatedQuestionnaires)
                     .HasForeignKey(q => q.CreatedBy)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(q => q.Theme)
+                    .WithMany(t => t.Questionnaires)
+                    .HasForeignKey(q => q.ThemeId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // Configure QuestionnaireResponse entity
@@ -212,6 +217,31 @@ namespace CyprusAgriculture.API.Data
             };
 
             modelBuilder.Entity<Theme>().HasData(themes);
+
+            // Seed default users
+            var users = new[]
+            {
+                new User
+                {
+                    Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                    FirstName = "System",
+                    LastName = "User",
+                    Email = "admin@agriculture.gov.cy",
+                    Role = "Administrator",
+                    IsActive = true
+                },
+                new User
+                {
+                    Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                    FirstName = "Demo",
+                    LastName = "User",
+                    Email = "user@agriculture.gov.cy",
+                    Role = "User",
+                    IsActive = true
+                }
+            };
+
+            modelBuilder.Entity<User>().HasData(users);
         }
     }
 }

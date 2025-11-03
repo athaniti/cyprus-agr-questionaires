@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Connection Test</title>
+</head>
+<body>
+    <h1>API Connection Test</h1>
+    <button onclick="testAPI()">Test API Connection</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing API connection...</p>';
+            
+            try {
+                // Test health endpoint
+                console.log('Testing health endpoint...');
+                const healthResponse = await fetch('http://localhost:5096/health');
+                console.log('Health response:', healthResponse);
+                
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.text();
+                    results.innerHTML += `<p>✅ Health check: ${healthData}</p>`;
+                } else {
+                    results.innerHTML += `<p>❌ Health check failed: ${healthResponse.status}</p>`;
+                }
+                
+                // Test questionnaires endpoint
+                console.log('Testing questionnaires endpoint...');
+                const questionnairesResponse = await fetch('http://localhost:5096/api/questionnaires');
+                console.log('Questionnaires response:', questionnairesResponse);
+                
+                if (questionnairesResponse.ok) {
+                    const questionnairesData = await questionnairesResponse.json();
+                    results.innerHTML += `<p>✅ Questionnaires: Found ${questionnairesData.data?.length || 0} questionnaires</p>`;
+                    results.innerHTML += `<pre>${JSON.stringify(questionnairesData, null, 2)}</pre>`;
+                } else {
+                    results.innerHTML += `<p>❌ Questionnaires failed: ${questionnairesResponse.status}</p>`;
+                }
+                
+            } catch (error) {
+                console.error('API test error:', error);
+                results.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -34,6 +34,8 @@ namespace CyprusAgriculture.API.Models
         [Required]
         public Guid CreatedBy { get; set; }
 
+        public Guid? ThemeId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
@@ -45,6 +47,9 @@ namespace CyprusAgriculture.API.Models
         // Navigation properties
         [ForeignKey("CreatedBy")]
         public virtual User Creator { get; set; } = null!;
+
+        [ForeignKey("ThemeId")]
+        public virtual Theme? Theme { get; set; }
 
         public virtual ICollection<QuestionnaireResponse> Responses { get; set; } = new List<QuestionnaireResponse>();
         public virtual ICollection<QuestionnaireInvitation> Invitations { get; set; } = new List<QuestionnaireInvitation>();
