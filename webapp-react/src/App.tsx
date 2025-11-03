@@ -1,42 +1,107 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { FormPreview } from './components/FormPreview';
 import { FormBuilder } from "@formio/react";
+import { QuestionnaireService } from './services/questionnaireService';
 import '@formio/js/dist/formio.full.min.css';
-import 'bootstrap/dist/css/bootstrap.min.css';
 
-// Μόνο visibility CSS - ΧΩΡΙΣ styling
-const formBuilderStyles = `
+// CSS για FormIO controls visibility
+const formioCSS = `
+  /* FormIO Builder Sidebar - Βασική εμφάνιση */
+  .formio-builder-sidebar,
   .builder-sidebar {
     display: block !important;
     visibility: visible !important;
-    opacity: 1 !important;
   }
   
+  /* FormIO Components Panel */
+  .formio-builder-sidebar .card,
+  .builder-sidebar .card {
+    display: block !important;
+  }
+  
+  .formio-builder-sidebar .card-body,
   .builder-sidebar .card-body {
     display: block !important;
     visibility: visible !important;
   }
   
+  /* Bootstrap Accordion/Collapse */
+  .formio-builder-sidebar .collapse.show,
   .builder-sidebar .collapse.show {
     display: block !important;
   }
   
+  /* FormIO Component Groups */
+  .formio-builder-group,
+  .formio-builder-component,
+  .formio-drag-component {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  /* FormIO Buttons */
+  .formio-builder-sidebar .btn,
   .builder-sidebar .btn {
     display: inline-block !important;
     visibility: visible !important;
     opacity: 1 !important;
   }
+  
+  /* FormIO Builder Panel */
+  .formio-builder-wrapper {
+    display: flex !important;
+  }
+  
+  .formio-builder .formio-builder-sidebar {
+    flex: 0 0 250px !important;
+    width: 250px !important;
+    display: block !important;
+  }
+  
+  .formio-builder .formio-builder-form {
+    flex: 1 !important;
+    display: block !important;
+  }
+  
+  /* FormIO Component Cards */
+  .formio-builder-sidebar .card-header {
+    display: block !important;
+  }
+  
+  .formio-builder-sidebar .card-header .btn {
+    width: 100% !important;
+    text-align: left !important;
+  }
+  
+  /* FormIO Drag Components */
+  .formio-builder-sidebar .formio-builder-component {
+    padding: 8px !important;
+    margin: 2px 0 !important;
+    border: 1px solid #ddd !important;
+    background: #f8f9fa !important;
+    cursor: move !important;
+  }
+  
+  /* FormIO Modal z-index fix */
+  .formio-dialog,
+  .modal.show {
+    z-index: 10000 !important;
+  }
+  
+  .modal-backdrop.show {
+    z-index: 9999 !important;
+  }
 `;
 
-// Προσθήκη styles στο head
+// Εφαρμογή CSS
 if (typeof document !== 'undefined') {
-  const styleElement = document.createElement('style');
-  styleElement.textContent = formBuilderStyles;
-  document.head.appendChild(styleElement);
+  const style = document.createElement('style');
+  style.textContent = formioCSS;
+  document.head.appendChild(style);
 }
 
 function AppContent() {
@@ -45,13 +110,102 @@ function AppContent() {
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any>(null);
   const [formBuilderMode, setFormBuilderMode] = useState<'create' | 'edit'>('create');
   const [newQuestionnaireName, setNewQuestionnaireName] = useState('');
+  const [currentFormSchema, setCurrentFormSchema] = useState<any>({ components: [] });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Συνάρτηση για αποθήκευση ερωτηματολογίου
+  const saveQuestionnaire = async () => {
+    if (!newQuestionnaireName.trim()) {
+      alert(language === 'el' ? 'Παρακαλώ εισάγετε όνομα ερωτηματολογίου' : 'Please enter questionnaire name');
+      return;
+    }
+
+    if (!currentFormSchema.components || currentFormSchema.components.length === 0) {
+      const confirmEmpty = window.confirm(
+        language === 'el' 
+          ? 'Το ερωτηματολόγιο είναι κενό. Θέλετε να το αποθηκεύσετε έτσι;'
+          : 'The questionnaire is empty. Do you want to save it anyway?'
+      );
+      if (!confirmEmpty) return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const questionnaireData = {
+        name: newQuestionnaireName,
+        description: `Questionnaire created ${formBuilderMode === 'create' ? 'on' : 'updated on'} ${new Date().toLocaleDateString()}`,
+        category: 'General', // Default category
+        schema: JSON.stringify(currentFormSchema),
+        targetResponses: 100,
+        createdBy: 'system-user' // In real app, get from JWT token
+      };
+
+      if (formBuilderMode === 'create') {
+        console.log('Creating questionnaire:', questionnaireData);
+        const response = await QuestionnaireService.createQuestionnaire(questionnaireData);
+        
+        // Προσθήκη στο local state
+        const newQuestionnaire = {
+          id: response.id,
+          name: response.name,
+          status: 'draft',
+          responses: 0,
+          currentResponses: 0,
+          targetResponses: 100,
+          createdAt: response.createdAt,
+          schema: currentFormSchema
+        };
+        
+        setQuestionnaires(prev => [...prev, newQuestionnaire]);
+        
+        alert(
+          language === 'el' 
+            ? `Ερωτηματολόγιο "${newQuestionnaireName}" δημιουργήθηκε επιτυχώς!`
+            : `Questionnaire "${newQuestionnaireName}" created successfully!`
+        );
+      } else {
+        // Edit mode
+        console.log('Updating questionnaire:', selectedQuestionnaire.id, questionnaireData);
+        await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id, questionnaireData);
+        
+        // Ενημέρωση local state
+        setQuestionnaires(prev => prev.map(q => 
+          q.id === selectedQuestionnaire.id 
+            ? { ...q, name: newQuestionnaireName, schema: currentFormSchema, updatedAt: new Date().toISOString() }
+            : q
+        ));
+        
+        alert(
+          language === 'el' 
+            ? `Ερωτηματολόγιο "${newQuestionnaireName}" ενημερώθηκε επιτυχώς!`
+            : `Questionnaire "${newQuestionnaireName}" updated successfully!`
+        );
+      }
+
+      // Κλείσιμο modal και reset
+      setShowFormBuilder(false);
+      setNewQuestionnaireName('');
+      setSelectedQuestionnaire(null);
+      setCurrentFormSchema({ components: [] });
+
+    } catch (error) {
+      console.error('Error saving questionnaire:', error);
+      alert(
+        language === 'el' 
+          ? `Σφάλμα κατά την αποθήκευση: ${error instanceof Error ? error.message : 'Άγνωστο σφάλμα'}`
+          : `Error saving questionnaire: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   // Safe questionnaires state with default data
   const [questionnaires, setQuestionnaires] = useState<any[]>([
@@ -201,6 +355,15 @@ function AppContent() {
                           setSelectedQuestionnaire(questionnaire);
                           setFormBuilderMode('edit');
                           setNewQuestionnaireName(questionnaire.name);
+                          // Φόρτωση schema από το questionnaire
+                          try {
+                            const schema = questionnaire.schema || { components: [] };
+                            setCurrentFormSchema(schema);
+                            console.log('Loading questionnaire schema for edit:', schema);
+                          } catch (error) {
+                            console.error('Error loading questionnaire schema:', error);
+                            setCurrentFormSchema({ components: [] });
+                          }
                           setShowFormBuilder(true);
                         }}
                         className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -332,6 +495,7 @@ function AppContent() {
                   if (newQuestionnaireName.trim()) {
                     setShowCreateModal(false);
                     setFormBuilderMode('create');
+                    setCurrentFormSchema({ components: [] }); // Καθαρό schema για νέο
                     setShowFormBuilder(true);
                   }
                 }}
@@ -445,8 +609,8 @@ function AppContent() {
 
       {/* Form Builder Modal */}
       {showFormBuilder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4 flex flex-col" style={{ zIndex: 10000 }}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 1000 }}>
+          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4 flex flex-col" style={{ zIndex: 1001 }}>
             <div className="px-8 py-6 border-b border-gray-200 flex-shrink-0" style={{ backgroundColor: '#004B87' }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white">
@@ -471,15 +635,22 @@ function AppContent() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto bg-gray-100 p-4">
-              <div className="h-full bg-white rounded-lg shadow-sm" style={{ minHeight: '600px', height: '100%' }}>
+            <div className="flex-1 overflow-auto bg-gray-50 p-4">
+              <div className="bg-white rounded-lg shadow-sm" 
+                   style={{ 
+                     minHeight: '700px', 
+                     padding: '20px',
+                     position: 'relative',
+                     zIndex: 1
+                   }}>
                 <FormBuilder 
-                  initialForm={{ 
+                  initialForm={currentFormSchema.components ? currentFormSchema : { 
                     components: [],
                     display: 'form'
                   }}
                   onChange={(form: any) => {
-                    console.log('Form changed:', form);
+                    console.log('Form schema updated:', form);
+                    setCurrentFormSchema(form);
                   }}
                   onBuilderReady={(builder: any) => {
                     console.log('FormBuilder ready:', builder);
@@ -501,16 +672,20 @@ function AppContent() {
                 {language === 'el' ? 'Ακύρωση' : 'Cancel'}
               </button>
               <button
-                onClick={() => {
-                  console.log('Questionnaire saved');
-                  alert(language === 'el' ? 'Ερωτηματολόγιο αποθηκεύτηκε!' : 'Questionnaire saved!');
-                  setShowFormBuilder(false);
-                  setNewQuestionnaireName('');
-                  setSelectedQuestionnaire(null);
-                }}
-                className="bg-[#004B87] text-white px-6 py-2 rounded-md hover:bg-blue-800 transition-colors"
+                onClick={saveQuestionnaire}
+                disabled={isSaving}
+                className="bg-[#004B87] text-white px-6 py-2 rounded-md hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
-                {language === 'el' ? 'Αποθήκευση' : 'Save'}
+                {isSaving && (
+                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {isSaving 
+                  ? (language === 'el' ? 'Αποθηκεύει...' : 'Saving...') 
+                  : (language === 'el' ? 'Αποθήκευση' : 'Save')
+                }
               </button>
             </div>
           </div>
