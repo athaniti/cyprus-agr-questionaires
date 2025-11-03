@@ -4,6 +4,8 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { FormPreview } from './components/FormPreview';
+import { UserManagement } from './components/UserManagement';
+import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { FormBuilder } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
 import '@formio/js/dist/formio.full.min.css';
@@ -118,6 +120,62 @@ function AppContent() {
   const [newQuestionnaireName, setNewQuestionnaireName] = useState('');
   const [currentFormSchema, setCurrentFormSchema] = useState<any>({ components: [] });
   const [isSaving, setIsSaving] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignmentQuestionnaire, setAssignmentQuestionnaire] = useState<any>(null);
+
+  // Mock users data (in real app would come from API)
+  const mockUsers = [
+    {
+      id: '1',
+      name: 'Γιάννης Παπαδόπουλος',
+      email: 'giannis.papadopoulos@agriculture.gov.cy',
+      role: 'admin',
+      department: 'Γεωργία',
+      location: 'Λευκωσία'
+    },
+    {
+      id: '2',
+      name: 'Μαρία Νικολάου',
+      email: 'maria.nikolaou@agriculture.gov.cy',
+      role: 'surveyor',
+      department: 'Κτηνοτροφία',
+      location: 'Λεμεσός'
+    },
+    {
+      id: '3',
+      name: 'Άντρη Γεωργίου',
+      email: 'andri.georgiou@agriculture.gov.cy',
+      role: 'surveyor',
+      department: 'Αλιεία',
+      location: 'Πάφος'
+    },
+    {
+      id: '4',
+      name: 'Πέτρος Κωνσταντίνου',
+      email: 'petros.konstantinou@agriculture.gov.cy',
+      role: 'respondent',
+      department: 'Γεωργία',
+      location: 'Λάρνακα'
+    },
+    {
+      id: '5',
+      name: 'Ελένη Μιχαήλ',
+      email: 'eleni.michael@agriculture.gov.cy',
+      role: 'respondent',
+      department: 'Κτηνοτροφία',
+      location: 'Αμμόχωστος'
+    }
+  ];
+
+  // Συνάρτηση για να πάρουμε user details από ID
+  const getUserById = (userId: string) => {
+    return mockUsers.find(user => user.id === userId);
+  };
+
+  // Συνάρτηση για να πάρουμε assigned users details
+  const getAssignedUsersDetails = (userIds: string[]) => {
+    return userIds.map(id => getUserById(id)).filter(Boolean);
+  };
 
   // Συνάρτηση για αποθήκευση ερωτηματολογίου
   const saveQuestionnaire = async () => {
@@ -206,6 +264,86 @@ function AppContent() {
       setIsSaving(false);
     }
   };
+
+  // Συνάρτηση για ανάθεση ερωτηματολογίου
+  const handleAssignQuestionnaire = (questionnaire: any) => {
+    setAssignmentQuestionnaire(questionnaire);
+    setShowAssignmentModal(true);
+  };
+
+  const handleQuestionnaireAssignment = async (userIds: string[], dueDate: string) => {
+    try {
+      console.log('Assigning questionnaire:', assignmentQuestionnaire.id, 'to users:', userIds, 'due:', dueDate);
+      
+      // Update questionnaire status to 'assigned'
+      setQuestionnaires(prev => prev.map(q => 
+        q.id === assignmentQuestionnaire.id 
+          ? { 
+              ...q, 
+              status: 'assigned', 
+              assignedUsers: userIds,
+              dueDate: dueDate,
+              assignedAt: new Date().toISOString()
+            }
+          : q
+      ));
+
+      alert(
+        language === 'el' 
+          ? `Ερωτηματολόγιο ανατέθηκε επιτυχώς σε ${userIds.length} χρήστες!`
+          : `Questionnaire assigned successfully to ${userIds.length} users!`
+      );
+
+      setShowAssignmentModal(false);
+      setAssignmentQuestionnaire(null);
+    } catch (error) {
+      console.error('Error assigning questionnaire:', error);
+      alert(
+        language === 'el' 
+          ? 'Σφάλμα κατά την ανάθεση ερωτηματολογίου'
+          : 'Error assigning questionnaire'
+      );
+    }
+  };
+
+  // Συνάρτηση για αποσυσχέτιση ερωτηματολογίου
+  const handleUnassignQuestionnaire = async (questionnaire: any) => {
+    const confirmUnassign = window.confirm(
+      language === 'el' 
+        ? `Είστε σίγουροι ότι θέλετε να αποσυσχετίσετε το ερωτηματολόγιο "${questionnaire.name}" από όλους τους χρήστες;`
+        : `Are you sure you want to unassign questionnaire "${questionnaire.name}" from all users?`
+    );
+
+    if (!confirmUnassign) return;
+
+    try {
+      // Update questionnaire status back to 'draft'
+      setQuestionnaires(prev => prev.map(q => 
+        q.id === questionnaire.id 
+          ? { 
+              ...q, 
+              status: 'draft', 
+              assignedUsers: undefined,
+              dueDate: undefined,
+              assignedAt: undefined
+            }
+          : q
+      ));
+
+      alert(
+        language === 'el' 
+          ? 'Ερωτηματολόγιο αποσυσχετίστηκε επιτυχώς!'
+          : 'Questionnaire unassigned successfully!'
+      );
+    } catch (error) {
+      console.error('Error unassigning questionnaire:', error);
+      alert(
+        language === 'el' 
+          ? 'Σφάλμα κατά την αποσυσχέτιση ερωτηματολογίου'
+          : 'Error unassigning questionnaire'
+      );
+    }
+  };
   
   // Safe questionnaires state with default data
   const [questionnaires, setQuestionnaires] = useState<any[]>([
@@ -222,6 +360,19 @@ function AppContent() {
     { 
       id: 'default-2', 
       name: 'Crop Assessment', 
+      status: 'assigned', 
+      responses: 0, 
+      currentResponses: 0,
+      targetResponses: 50,
+      completionRate: 0,
+      createdAt: '2025-10-18T14:30:00Z',
+      assignedUsers: ['1', '2', '4'],
+      dueDate: '2025-12-15T17:00:00Z',
+      assignedAt: '2025-11-01T09:15:00Z'
+    },
+    { 
+      id: 'default-3', 
+      name: 'Equipment Inventory', 
       status: 'draft', 
       responses: 0, 
       currentResponses: 0,
@@ -271,10 +422,7 @@ function AppContent() {
             <p className="text-gray-600">{language === 'el' ? 'Αναφορές και αναλύσεις' : 'Reports and analytics'}</p>
           </div>;
         case 'users':
-          return <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Χρήστες' : 'Users'}</h2>
-            <p className="text-gray-600">{language === 'el' ? 'Διαχείριση χρηστών' : 'User management'}</p>
-          </div>;
+          return <UserManagement language={language} />;
         case 'settings':
           return <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Ρυθμίσεις' : 'Settings'}</h2>
@@ -326,12 +474,15 @@ function AppContent() {
                       ? 'bg-green-100 text-green-800' 
                       : questionnaire.status === 'draft'
                       ? 'bg-yellow-100 text-yellow-800'
+                      : questionnaire.status === 'assigned'
+                      ? 'bg-orange-100 text-orange-800'
                       : questionnaire.status === 'completed'
                       ? 'bg-blue-100 text-blue-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
                     {questionnaire.status === 'active' && (language === 'el' ? 'Ενεργό' : 'Active')}
                     {questionnaire.status === 'draft' && (language === 'el' ? 'Πρόχειρο' : 'Draft')}
+                    {questionnaire.status === 'assigned' && (language === 'el' ? 'Ανατεθειμένο' : 'Assigned')}
                     {questionnaire.status === 'completed' && (language === 'el' ? 'Ολοκληρωμένο' : 'Completed')}
                     {questionnaire.status === 'archived' && (language === 'el' ? 'Αρχειοθετημένο' : 'Archived')}
                   </span>
@@ -371,6 +522,28 @@ function AppContent() {
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
+                    {(questionnaire.status === 'draft' || questionnaire.status === 'active') && (
+                      <button
+                        onClick={() => handleAssignQuestionnaire(questionnaire)}
+                        className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        title={language === 'el' ? 'Ανάθεση' : 'Assign'}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                        </svg>
+                      </button>
+                    )}
+                    {questionnaire.status === 'assigned' && (
+                      <button
+                        onClick={() => handleUnassignQuestionnaire(questionnaire)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title={language === 'el' ? 'Αποσυσχέτιση' : 'Unassign'}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
                         </svg>
                       </button>
                     )}
@@ -423,6 +596,33 @@ function AppContent() {
                     </span>
                   </div>
                 </div>
+
+                {/* Assignment Info */}
+                {questionnaire.status === 'assigned' && questionnaire.assignedUsers && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="flex items-center gap-2 text-sm text-orange-700">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                      </svg>
+                      <span className="font-medium">
+                        {language === 'el' 
+                          ? `Ανατεθειμένο σε ${questionnaire.assignedUsers.length} χρήστες`
+                          : `Assigned to ${questionnaire.assignedUsers.length} users`
+                        }
+                      </span>
+                    </div>
+                    {questionnaire.dueDate && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>
+                          {language === 'el' ? 'Λήξη:' : 'Due:'} {new Date(questionnaire.dueDate).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -539,10 +739,13 @@ function AppContent() {
                       ? 'bg-green-100 text-green-800' 
                       : selectedQuestionnaire.status === 'draft'
                       ? 'bg-yellow-100 text-yellow-800'
+                      : selectedQuestionnaire.status === 'assigned'
+                      ? 'bg-orange-100 text-orange-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
                     {selectedQuestionnaire.status === 'active' && (language === 'el' ? 'Ενεργό' : 'Active')}
                     {selectedQuestionnaire.status === 'draft' && (language === 'el' ? 'Πρόχειρο' : 'Draft')}
+                    {selectedQuestionnaire.status === 'assigned' && (language === 'el' ? 'Ανατεθειμένο' : 'Assigned')}
                     {selectedQuestionnaire.status === 'completed' && (language === 'el' ? 'Ολοκληρωμένο' : 'Completed')}
                   </span>
                 </div>
@@ -572,6 +775,90 @@ function AppContent() {
                 </p>
               </div>
 
+              {/* Assignment Information */}
+              {selectedQuestionnaire.status === 'assigned' && selectedQuestionnaire.assignedUsers && (
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    {language === 'el' ? 'Ανατεθειμένο σε' : 'Assigned to'}
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">
+                        {language === 'el' 
+                          ? `Ανατεθειμένο σε ${selectedQuestionnaire.assignedUsers.length} χρήστες:`
+                          : `Assigned to ${selectedQuestionnaire.assignedUsers.length} users:`
+                        }
+                      </span>
+                    </div>
+                    
+                    {/* Users List */}
+                    <div className="space-y-2">
+                      {getAssignedUsersDetails(selectedQuestionnaire.assignedUsers).map((user: any) => (
+                        <div key={user.id} className="bg-white p-3 rounded-lg border border-orange-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{user.name}</p>
+                              <p className="text-sm text-gray-500">{user.email}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                                user.role === 'surveyor' ? 'bg-blue-100 text-blue-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {user.role === 'admin' ? (language === 'el' ? 'Διαχειριστής' : 'Administrator') :
+                                 user.role === 'surveyor' ? (language === 'el' ? 'Ερευνητής' : 'Surveyor') :
+                                 (language === 'el' ? 'Ερωτώμενος' : 'Respondent')}
+                              </span>
+                              {user.department && (
+                                <p className="text-xs text-gray-500 mt-1">{user.department}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {selectedQuestionnaire.dueDate && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">
+                          {language === 'el' ? 'Λήξη:' : 'Due:'} 
+                        </span>
+                        {' '}
+                        {new Date(selectedQuestionnaire.dueDate).toLocaleDateString(
+                          language === 'el' ? 'el-GR' : 'en-US',
+                          { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }
+                        )}
+                      </p>
+                    )}
+                    {selectedQuestionnaire.assignedAt && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">
+                          {language === 'el' ? 'Ανατέθηκε:' : 'Assigned:'} 
+                        </span>
+                        {' '}
+                        {new Date(selectedQuestionnaire.assignedAt).toLocaleDateString(
+                          language === 'el' ? 'el-GR' : 'en-US',
+                          { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-2">
                   {language === 'el' ? 'Ημερομηνία Δημιουργίας' : 'Created Date'}
@@ -600,6 +887,17 @@ function AppContent() {
                   className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   {language === 'el' ? 'Επεξεργασία' : 'Edit'}
+                </button>
+              )}
+              {selectedQuestionnaire.status === 'assigned' && (
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    handleUnassignQuestionnaire(selectedQuestionnaire);
+                  }}
+                  className="flex-1 px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  {language === 'el' ? 'Αποσυσχέτιση' : 'Unassign'}
                 </button>
               )}
             </div>
@@ -697,6 +995,20 @@ function AppContent() {
         <FormPreview
           questionnaire={selectedQuestionnaire}
           onClose={() => setShowPreview(false)}
+          language={language}
+        />
+      )}
+
+      {/* Assignment Modal */}
+      {showAssignmentModal && assignmentQuestionnaire && (
+        <QuestionnaireAssignment
+          questionnaireId={assignmentQuestionnaire.id}
+          questionnaireName={assignmentQuestionnaire.name}
+          onClose={() => {
+            setShowAssignmentModal(false);
+            setAssignmentQuestionnaire(null);
+          }}
+          onAssign={handleQuestionnaireAssignment}
           language={language}
         />
       )}
