@@ -61,7 +61,21 @@ namespace CyprusAgriculture.API.Controllers
                         CreatedBy = "System User", // Fallback when no user relation
                         q.CreatedAt,
                         q.PublishedAt,
-                        q.UpdatedAt
+                        q.UpdatedAt,
+                        // Add sample information
+                        SamplesCount = _context.Samples.Count(s => s.QuestionnaireId == q.Id),
+                        Samples = _context.Samples
+                            .Where(s => s.QuestionnaireId == q.Id)
+                            .Select(s => new
+                            {
+                                s.Id,
+                                s.Name,
+                                s.TargetSize,
+                                s.Status,
+                                s.CreatedAt
+                            })
+                            .Take(3)
+                            .ToList()
                     })
                     .ToListAsync();
 

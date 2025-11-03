@@ -347,56 +347,98 @@ function AppContent() {
     }
   };
   
-  // Safe questionnaires state with default data
-  const [questionnaires, setQuestionnaires] = useState<any[]>([
-    { 
-      id: 'default-1', 
-      name: 'Livestock Survey', 
-      status: 'active', 
-      responses: 45, 
-      currentResponses: 45,
-      targetResponses: 100,
-      completionRate: 45,
-      createdAt: '2025-10-20T10:00:00Z'
-    },
-    { 
-      id: 'default-2', 
-      name: 'Crop Assessment', 
-      status: 'assigned', 
-      responses: 0, 
-      currentResponses: 0,
-      targetResponses: 50,
-      completionRate: 0,
-      createdAt: '2025-10-18T14:30:00Z',
-      assignedUsers: ['1', '2', '4'],
-      dueDate: '2025-12-15T17:00:00Z',
-      assignedAt: '2025-11-01T09:15:00Z'
-    },
-    { 
-      id: 'default-3', 
-      name: 'Equipment Inventory', 
-      status: 'draft', 
-      responses: 0, 
-      currentResponses: 0,
-      targetResponses: 150,
-      completionRate: 0,
-      createdAt: '2025-10-19T15:30:00Z'
-    }
-  ]);
+  // Safe questionnaires state with default data - will be replaced by API data
+  const [questionnaires, setQuestionnaires] = useState<any[]>([]);
 
-  // Safe localStorage loading
+  // Load questionnaires from API
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('questionnaires');
-      if (saved) {
-        const savedQuestionnaires = JSON.parse(saved);
-        if (Array.isArray(savedQuestionnaires) && savedQuestionnaires.length > 0) {
-          setQuestionnaires(prev => [...prev, ...savedQuestionnaires]);
+    const loadQuestionnaires = async () => {
+      try {
+        console.log('Loading questionnaires from Cyprus API...');
+        const response = await fetch('http://localhost:5050/api/questionnaires');
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('API Response:', result);
+          
+          // Map the API response to match the App component structure
+          const mappedQuestionnaires = result.data.map((q: any) => ({
+            id: q.id,
+            name: q.name,
+            description: q.description,
+            category: q.category,
+            status: q.status,
+            currentResponses: q.currentResponses,
+            targetResponses: q.targetResponses,
+            completionRate: q.completionRate,
+            createdAt: q.createdAt,
+            samples: q.samples || [],
+            samplesCount: q.samplesCount
+          }));
+          
+          console.log('Mapped questionnaires:', mappedQuestionnaires);
+          setQuestionnaires(mappedQuestionnaires);
+        } else {
+          console.warn('API not available, using fallback Cyprus data');
+          // Fallback to Cyprus mock data
+          setQuestionnaires([
+            {
+              id: 'aaaaaaaa-1111-1111-1111-111111111111',
+              name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025',
+              description: 'Ετήσια έρευνα για την κατάσταση της ελαιοπαραγωγής στην Κύπρο',
+              category: 'Φυτική Παραγωγή',
+              status: 'active',
+              currentResponses: 0,
+              targetResponses: 100,
+              completionRate: 0,
+              createdAt: '2025-11-03T21:00:00Z',
+              samplesCount: 1
+            },
+            {
+              id: 'bbbbbbbb-2222-2222-2222-222222222222',
+              name: 'Έρευνα Κτηνοτροφικών Μονάδων',
+              description: 'Έρευνα για τη δομή και τα χαρακτηριστικά των κτηνοτροφικών εκμεταλλεύσεων στην Κύπρο',
+              category: 'Κτηνοτροφία',
+              status: 'active',
+              currentResponses: 0,
+              targetResponses: 50,
+              completionRate: 0,
+              createdAt: '2025-11-03T21:00:00Z',
+              samplesCount: 1
+            },
+            {
+              id: 'cccccccc-3333-3333-3333-333333333333',
+              name: 'Έρευνα Αρδευτικών Συστημάτων',
+              description: 'Μελέτη των μεθόδων άρδευσης και της χρήσης νερού στις αγροτικές εκμεταλλεύσεις',
+              category: 'Άρδευση',
+              status: 'active',
+              currentResponses: 0,
+              targetResponses: 80,
+              completionRate: 0,
+              createdAt: '2025-11-03T21:00:00Z',
+              samplesCount: 1
+            }
+          ]);
         }
+      } catch (error) {
+        console.error('Error loading questionnaires:', error);
+        // Fallback to Cyprus mock data
+        setQuestionnaires([
+          {
+            id: 'aaaaaaaa-1111-1111-1111-111111111111',
+            name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025',
+            category: 'Φυτική Παραγωγή',
+            status: 'active',
+            currentResponses: 0,
+            targetResponses: 100,
+            completionRate: 0,
+            createdAt: '2025-11-03T21:00:00Z'
+          }
+        ]);
       }
-    } catch (error) {
-      console.warn('Failed to load questionnaires from localStorage:', error);
-    }
+    };
+
+    loadQuestionnaires();
   }, []);
 
   // Mock user

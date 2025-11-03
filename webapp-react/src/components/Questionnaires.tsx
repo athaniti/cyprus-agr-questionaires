@@ -159,56 +159,86 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
       setError(null);
       
       try {
-        // First try to load from API
-        const result = await apiService.getQuestionnaires();
-        setQuestionnaires(result.data);
-      } catch (error) {
-        console.warn('API not available, using mock data:', error);
+        console.log('Attempting to fetch questionnaires from API...');
+        // Try to load from the Cyprus Agriculture API
+        const response = await fetch('http://localhost:5050/api/questionnaires');
         
-        // Fallback to mock data (no error state for better UX)
-        const mockData = [
+        console.log('API Response status:', response.status, response.ok);
+        
+        if (!response.ok) {
+          throw new Error(`API responded with status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('API Response data:', result);
+        
+        // Map the API response to match our component structure
+        const mappedQuestionnaires = result.data.map((q: any) => ({
+          id: q.id,
+          name: q.name,
+          description: q.description,
+          category: q.category,
+          status: q.status,
+          currentResponses: q.currentResponses,
+          targetResponses: q.targetResponses,
+          completionRate: q.completionRate,
+          createdAt: q.createdAt,
+          publishedAt: q.publishedAt,
+          updatedAt: q.updatedAt,
+          samplesCount: q.samplesCount,
+          samples: q.samples || []
+        }));
+        
+        console.log('Mapped questionnaires:', mappedQuestionnaires);
+        setQuestionnaires(mappedQuestionnaires);
+      } catch (error) {
+        console.error('Error loading questionnaires from API:', error);
+        console.warn('Cyprus API not available, using mock data:', error);
+        
+        // Enhanced fallback to Cyprus-themed mock data
+        const cyprusMockData = [
           {
-            id: '1',
-            name: 'Livestock Management Survey',
-            category: 'Livestock',
+            id: 'aaaaaaaa-1111-1111-1111-111111111111',
+            name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025',
+            description: 'Ετήσια έρευνα για την κατάσταση της ελαιοπαραγωγής στην Κύπρο',
+            category: 'Φυτική Παραγωγή',
             status: 'active',
-            currentResponses: 25,
-            targetResponses: 100,
-            completionRate: 25,
-            createdAt: '2025-10-20T10:00:00Z'
-          },
-          {
-            id: '2', 
-            name: 'Crop Production Assessment',
-            category: 'Crops',
-            status: 'draft',
             currentResponses: 0,
-            targetResponses: 150,
+            targetResponses: 100,
             completionRate: 0,
-            createdAt: '2025-10-19T15:30:00Z'
+            createdAt: '2025-11-03T21:00:00Z',
+            samplesCount: 1,
+            samples: [{ id: '1', name: 'Δείγμα Ελαιοπαραγωγών Πάφου', targetSize: 20, status: 'active' }]
           },
           {
-            id: '3',
-            name: 'Irrigation Systems Evaluation',
-            category: 'Irrigation',
+            id: 'bbbbbbbb-2222-2222-2222-222222222222',
+            name: 'Έρευνα Κτηνοτροφικών Μονάδων',
+            description: 'Έρευνα για τη δομή και τα χαρακτηριστικά των κτηνοτροφικών εκμεταλλεύσεων στην Κύπρο',
+            category: 'Κτηνοτροφία',
             status: 'active',
-            currentResponses: 75,
-            targetResponses: 120,
-            completionRate: 63,
-            createdAt: '2025-10-18T09:15:00Z'
+            currentResponses: 0,
+            targetResponses: 50,
+            completionRate: 0,
+            createdAt: '2025-11-03T21:00:00Z',
+            samplesCount: 1,
+            samples: [{ id: '2', name: 'Δείγμα Κτηνοτροφικών Μονάδων Λεμεσού', targetSize: 15, status: 'active' }]
           },
           {
-            id: '4',
-            name: 'Equipment and Machinery Survey',
-            category: 'Equipment',
-            status: 'completed',
-            currentResponses: 200,
-            targetResponses: 200,
-            completionRate: 100,
-            createdAt: '2025-10-15T14:30:00Z'
+            id: 'cccccccc-3333-3333-3333-333333333333',
+            name: 'Έρευνα Αρδευτικών Συστημάτων',
+            description: 'Μελέτη των μεθόδων άρδευσης και της χρήσης νερού στις αγροτικές εκμεταλλεύσεις',
+            category: 'Άρδευση',
+            status: 'active',
+            currentResponses: 0,
+            targetResponses: 80,
+            completionRate: 0,
+            createdAt: '2025-11-03T21:00:00Z',
+            samplesCount: 1,
+            samples: [{ id: '3', name: 'Δείγμα Αρδευτικών Συστημάτων', targetSize: 25, status: 'active' }]
           }
         ];
-        setQuestionnaires(mockData);
+        console.log('Using fallback mock data:', cyprusMockData);
+        setQuestionnaires(cyprusMockData);
       } finally {
         setLoading(false);
       }
@@ -381,6 +411,20 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                     <div>
                       <p className="text-gray-900">{questionnaire.name}</p>
                       <p className="text-xs text-gray-500">{questionnaire.category}</p>
+                      {questionnaire.samples && questionnaire.samples.length > 0 && (
+                        <div className="mt-1">
+                          <p className="text-xs text-blue-600">{questionnaire.samplesCount} δείγματα</p>
+                          <div className="text-xs text-gray-500">
+                            {questionnaire.samples.slice(0, 2).map((sample: any, idx: number) => (
+                              <span key={sample.id}>
+                                {sample.name}
+                                {idx < Math.min(questionnaire.samples.length - 1, 1) && ', '}
+                              </span>
+                            ))}
+                            {questionnaire.samples.length > 2 && <span>...</span>}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

@@ -32,6 +32,7 @@ namespace CyprusAgriculture.API.Data
         public DbSet<Farm> Farms { get; set; }
         public DbSet<Sample> Samples { get; set; }
         public DbSet<SampleParticipant> SampleParticipants { get; set; }
+        public DbSet<SampleAssignment> SampleAssignments { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Theme> Themes { get; set; }
 
@@ -163,6 +164,33 @@ namespace CyprusAgriculture.API.Data
                     .WithMany(f => f.SampleParticipants)
                     .HasForeignKey(sp => sp.FarmId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure SampleAssignment entity
+            modelBuilder.Entity<SampleAssignment>(entity =>
+            {
+                entity.ToTable("sample_assignments");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                entity.HasOne(sa => sa.Sample)
+                    .WithMany()
+                    .HasForeignKey(sa => sa.SampleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(sa => sa.User)
+                    .WithMany()
+                    .HasForeignKey(sa => sa.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(sa => sa.AssignedByUser)
+                    .WithMany()
+                    .HasForeignKey(sa => sa.AssignedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Index for efficient querying
+                entity.HasIndex(sa => new { sa.SampleId, sa.UserId }).IsUnique();
+                entity.HasIndex(sa => sa.UserId);
+                entity.HasIndex(sa => sa.Status);
             });
 
             // Configure Invitation entity

@@ -178,10 +178,11 @@ export function SampleManagement() {
 
   const fetchQuestionnaires = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/questionnaires');
+      const response = await fetch('http://localhost:5050/api/questionnaires');
       if (response.ok) {
         const data = await response.json();
-        setQuestionnaires(data);
+        // Handle the paginated response structure
+        setQuestionnaires(data.data || data);
       }
     } catch (error) {
       console.error('Error fetching questionnaires:', error);

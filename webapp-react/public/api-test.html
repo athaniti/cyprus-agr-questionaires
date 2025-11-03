@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cyprus Agriculture API Test</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Cyprus Agriculture API Test</h1>
+    <button onclick="testQuestionnaires()">Test Questionnaires API</button>
+    <button onclick="testUsers()">Test Users API</button>
+    <div id="results"></div>
+
+    <script>
+        async function testQuestionnaires() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing questionnaires API...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:5050/api/questionnaires');
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Questionnaires data:', data);
+                
+                resultsDiv.innerHTML = `
+                    <h3>✅ Questionnaires API Success</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Count:</strong> ${data.data ? data.data.length : 'N/A'}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `
+                    <h3>❌ Questionnaires API Error</h3>
+                    <p>${error.message}</p>
+                    <p>Check browser console for details</p>
+                `;
+            }
+        }
+
+        async function testUsers() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing users API...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:5050/api/sample-assignments/users');
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Users data:', data);
+                
+                resultsDiv.innerHTML = `
+                    <h3>✅ Users API Success</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Count:</strong> ${data.length}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `
+                    <h3>❌ Users API Error</h3>
+                    <p>${error.message}</p>
+                    <p>Check browser console for details</p>
+                `;
+            }
+        }
+
+        // Test on page load
+        window.onload = function() {
+            console.log('Page loaded, testing API connection...');
+            testQuestionnaires();
+        };
+    </script>
+</body>
+</html>
