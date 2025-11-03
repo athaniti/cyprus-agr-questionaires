@@ -1,0 +1,303 @@
+using CyprusAgriculture.API.Data;
+using CyprusAgriculture.API.Models;
+using System.Globalization;
+using System.Text;
+
+namespace CyprusAgriculture.API.Services
+{
+    public interface ICsvImportService
+    {
+        Task<ImportResult> ImportFarmsFromCsvAsync(Stream csvStream);
+        Task<int> GetFarmsCountAsync();
+        Task ClearAllFarmsAsync();
+    }
+
+    public class ImportResult
+    {
+        public int TotalRecords { get; set; }
+        public int SuccessfulImports { get; set; }
+        public int FailedImports { get; set; }
+        public List<string> Errors { get; set; } = new();
+        public bool IsSuccess => FailedImports == 0;
+    }
+
+    public class CsvImportService : ICsvImportService
+    {
+        private readonly CyprusAgricultureDbContext _context;
+        private readonly ILogger<CsvImportService> _logger;
+
+        public CsvImportService(CyprusAgricultureDbContext context, ILogger<CsvImportService> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        public async Task<ImportResult> ImportFarmsFromCsvAsync(Stream csvStream)
+        {
+            var result = new ImportResult();
+            
+            try
+            {
+                using var reader = new StreamReader(csvStream, Encoding.UTF8);
+                var headerLine = await reader.ReadLineAsync();
+                
+                if (string.IsNullOrEmpty(headerLine))
+                {
+                    result.Errors.Add("CSV file is empty or has no header");
+                    return result;
+                }
+
+                var headers = ParseCsvLine(headerLine);
+                var headerMap = CreateHeaderMapping(headers);
+
+                string? line;
+                int lineNumber = 1;
+
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    lineNumber++;
+                    result.TotalRecords++;
+
+                    try
+                    {
+                        var values = ParseCsvLine(line);
+                        if (values.Length == 0) continue;
+
+                        var farm = CreateFarmFromCsvValues(values, headerMap, lineNumber);
+                        if (farm != null)
+                        {
+                            _context.Farms.Add(farm);
+                            result.SuccessfulImports++;
+                        }
+                        else
+                        {
+                            result.FailedImports++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.FailedImports++;
+                        result.Errors.Add($"Line {lineNumber}: {ex.Message}");
+                        _logger.LogWarning(ex, "Failed to import farm data at line {LineNumber}", lineNumber);
+                    }
+                }
+
+                if (result.SuccessfulImports > 0)
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Successfully imported {Count} farms", result.SuccessfulImports);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add($"General import error: {ex.Message}");
+                _logger.LogError(ex, "Failed to import CSV file");
+            }
+
+            return result;
+        }
+
+        public async Task<int> GetFarmsCountAsync()
+        {
+            return await _context.Farms.CountAsync();
+        }
+
+        public async Task ClearAllFarmsAsync()
+        {
+            var farms = _context.Farms.ToList();
+            _context.Farms.RemoveRange(farms);
+            await _context.SaveChangesAsync();
+        }
+
+        private string[] ParseCsvLine(string line)
+        {
+            var result = new List<string>();
+            var current = new StringBuilder();
+            bool inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        current.Append('"');
+                        i++; // Skip the next quote
+                    }
+                    else
+                    {
+                        inQuotes = !inQuotes;
+                    }
+                }
+                else if (c == ',' && !inQuotes)
+                {
+                    result.Add(current.ToString().Trim());
+                    current.Clear();
+                }
+                else
+                {
+                    current.Append(c);
+                }
+            }
+
+            result.Add(current.ToString().Trim());
+            return result.ToArray();
+        }
+
+        private Dictionary<string, int> CreateHeaderMapping(string[] headers)
+        {
+            var mapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var header = headers[i].Trim().ToLowerInvariant();
+                
+                // Common variations for farm data
+                if (header.Contains("κωδικός") || header.Contains("code") || header.Contains("id"))
+                    mapping["farm_code"] = i;
+                else if (header.Contains("όνομα") || header.Contains("επωνυμία") || header.Contains("name"))
+                    mapping["farm_name"] = i;
+                else if (header.Contains("ιδιοκτήτη") || header.Contains("owner"))
+                    mapping["owner_name"] = i;
+                else if (header.Contains("περιφέρεια") || header.Contains("region"))
+                    mapping["region"] = i;
+                else if (header.Contains("δήμος") || header.Contains("municipality"))
+                    mapping["municipality"] = i;
+                else if (header.Contains("περιοχή") || header.Contains("district"))
+                    mapping["district"] = i;
+                else if (header.Contains("τύπος") || header.Contains("type"))
+                    mapping["farm_type"] = i;
+                else if (header.Contains("έκταση") || header.Contains("hectares") || header.Contains("size"))
+                    mapping["farm_size"] = i;
+                else if (header.Contains("οικονομικό") || header.Contains("economic") || header.Contains("euros"))
+                    mapping["economic_size"] = i;
+                else if (header.Contains("κατηγορία") || header.Contains("category"))
+                    mapping["economic_category"] = i;
+                else if (header.Contains("ζώα") || header.Contains("livestock"))
+                    mapping["livestock"] = i;
+                else if (header.Contains("τηλέφωνο") || header.Contains("phone"))
+                    mapping["phone"] = i;
+                else if (header.Contains("email"))
+                    mapping["email"] = i;
+                else if (header.Contains("διεύθυνση") || header.Contains("address"))
+                    mapping["address"] = i;
+                else if (header.Contains("latitude") || header.Contains("γεωγραφικό πλάτος"))
+                    mapping["latitude"] = i;
+                else if (header.Contains("longitude") || header.Contains("γεωγραφικό μήκος"))
+                    mapping["longitude"] = i;
+                else if (header.Contains("σημειώσεις") || header.Contains("notes"))
+                    mapping["notes"] = i;
+            }
+
+            return mapping;
+        }
+
+        private Farm? CreateFarmFromCsvValues(string[] values, Dictionary<string, int> headerMap, int lineNumber)
+        {
+            try
+            {
+                var farm = new Farm();
+
+                // Required fields
+                if (headerMap.TryGetValue("farm_code", out int codeIndex) && codeIndex < values.Length)
+                {
+                    farm.FarmCode = values[codeIndex].Trim();
+                    if (string.IsNullOrEmpty(farm.FarmCode))
+                    {
+                        farm.FarmCode = $"FARM_{lineNumber:D6}";
+                    }
+                }
+                else
+                {
+                    farm.FarmCode = $"FARM_{lineNumber:D6}";
+                }
+
+                if (headerMap.TryGetValue("farm_name", out int nameIndex) && nameIndex < values.Length)
+                {
+                    farm.FarmName = values[nameIndex].Trim();
+                    if (string.IsNullOrEmpty(farm.FarmName))
+                    {
+                        farm.FarmName = $"Εκμετάλλευση {farm.FarmCode}";
+                    }
+                }
+                else
+                {
+                    farm.FarmName = $"Εκμετάλλευση {farm.FarmCode}";
+                }
+
+                // Optional fields
+                SetOptionalStringField(values, headerMap, "owner_name", (value) => farm.OwnerName = value);
+                SetOptionalStringField(values, headerMap, "region", (value) => farm.Region = value);
+                SetOptionalStringField(values, headerMap, "municipality", (value) => farm.Municipality = value);
+                SetOptionalStringField(values, headerMap, "district", (value) => farm.District = value);
+                SetOptionalStringField(values, headerMap, "farm_type", (value) => farm.FarmType = value);
+                SetOptionalStringField(values, headerMap, "economic_category", (value) => farm.EconomicSizeCategory = value);
+                SetOptionalStringField(values, headerMap, "phone", (value) => farm.Phone = value);
+                SetOptionalStringField(values, headerMap, "email", (value) => farm.Email = value);
+                SetOptionalStringField(values, headerMap, "address", (value) => farm.Address = value);
+                SetOptionalStringField(values, headerMap, "notes", (value) => farm.Notes = value);
+
+                // Numeric fields
+                SetOptionalDecimalField(values, headerMap, "farm_size", (value) => farm.FarmSizeHectares = value);
+                SetOptionalDecimalField(values, headerMap, "economic_size", (value) => farm.EconomicSizeEuros = value);
+                SetOptionalDecimalField(values, headerMap, "latitude", (value) => farm.Latitude = value);
+                SetOptionalDecimalField(values, headerMap, "longitude", (value) => farm.Longitude = value);
+
+                SetOptionalIntField(values, headerMap, "livestock", (value) => farm.TotalLivestock = value);
+
+                return farm;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to create farm from CSV line {LineNumber}", lineNumber);
+                return null;
+            }
+        }
+
+        private void SetOptionalStringField(string[] values, Dictionary<string, int> headerMap, 
+            string key, Action<string> setter)
+        {
+            if (headerMap.TryGetValue(key, out int index) && index < values.Length)
+            {
+                var value = values[index].Trim();
+                if (!string.IsNullOrEmpty(value))
+                {
+                    setter(value);
+                }
+            }
+        }
+
+        private void SetOptionalDecimalField(string[] values, Dictionary<string, int> headerMap, 
+            string key, Action<decimal> setter)
+        {
+            if (headerMap.TryGetValue(key, out int index) && index < values.Length)
+            {
+                var value = values[index].Trim();
+                if (!string.IsNullOrEmpty(value))
+                {
+                    // Handle different decimal separators
+                    value = value.Replace(',', '.');
+                    if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal result))
+                    {
+                        setter(result);
+                    }
+                }
+            }
+        }
+
+        private void SetOptionalIntField(string[] values, Dictionary<string, int> headerMap, 
+            string key, Action<int> setter)
+        {
+            if (headerMap.TryGetValue(key, out int index) && index < values.Length)
+            {
+                var value = values[index].Trim();
+                if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int result))
+                {
+                    setter(result);
+                }
+            }
+        }
+    }
+}

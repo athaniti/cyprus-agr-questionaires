@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { FormPreview } from './components/FormPreview';
 import { UserManagement } from './components/UserManagement';
 import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
+import { SampleManagement } from './components/SampleManagement';
 import { FormBuilder } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
 import '@formio/js/dist/formio.full.min.css';
@@ -411,6 +413,8 @@ function AppContent() {
           return <Dashboard />;
         case 'questionnaires':
           return renderQuestionnaires();
+        case 'samples':
+          return <SampleManagement />;
         case 'locations':
           return <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Τοποθεσίες' : 'Locations'}</h2>
@@ -1019,7 +1023,9 @@ function AppContent() {
 function App() {
   return (
     <LanguageProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </LanguageProvider>
   );
 }

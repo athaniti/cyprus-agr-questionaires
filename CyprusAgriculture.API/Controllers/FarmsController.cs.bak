@@ -1,0 +1,277 @@
+using Microsoft.AspNetCore.Mvc;
+using CyprusAgriculture.API.Services;
+using CyprusAgriculture.API.Data;
+
+namespace CyprusAgriculture.API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class FarmsController : ControllerBase
+    {
+        private readonly ICsvImportService _csvImportService;
+        private readonly CyprusAgricultureDbContext _context;
+        private readonly ILogger<FarmsController> _logger;
+
+        public FarmsController(
+            ICsvImportService csvImportService,
+            CyprusAgricultureDbContext context,
+            ILogger<FarmsController> logger)
+        {
+            _csvImportService = csvImportService;
+            _context = context;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all farms with optional filtering
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetFarms(
+            [FromQuery] string? region = null,
+            [FromQuery] string? municipality = null,
+            [FromQuery] string? farmType = null,
+            [FromQuery] string? economicSizeCategory = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
+        {
+            try
+            {
+                var query = _context.Farms.Where(f => f.IsActive);
+
+                // Apply filters
+                if (!string.IsNullOrEmpty(region))
+                    query = query.Where(f => f.Region == region);
+
+                if (!string.IsNullOrEmpty(municipality))
+                    query = query.Where(f => f.Municipality == municipality);
+
+                if (!string.IsNullOrEmpty(farmType))
+                    query = query.Where(f => f.FarmType == farmType);
+
+                if (!string.IsNullOrEmpty(economicSizeCategory))
+                    query = query.Where(f => f.EconomicSizeCategory == economicSizeCategory);
+
+                var totalCount = await query.CountAsync();
+                var farms = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .OrderBy(f => f.FarmCode)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    farms,
+                    totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving farms");
+                return StatusCode(500, new { error = "Internal server error while retrieving farms" });
+            }
+        }
+
+        /// <summary>
+        /// Get farm statistics and aggregated data
+        /// </summary>
+        [HttpGet("statistics")]
+        public async Task<IActionResult> GetFarmStatistics()
+        {
+            try
+            {
+                var totalFarms = await _context.Farms.CountAsync(f => f.IsActive);
+
+                var regionStats = await _context.Farms
+                    .Where(f => f.IsActive && f.Region != null)
+                    .GroupBy(f => f.Region)
+                    .Select(g => new { Region = g.Key, Count = g.Count() })
+                    .OrderBy(x => x.Region)
+                    .ToListAsync();
+
+                var farmTypeStats = await _context.Farms
+                    .Where(f => f.IsActive && f.FarmType != null)
+                    .GroupBy(f => f.FarmType)
+                    .Select(g => new { FarmType = g.Key, Count = g.Count() })
+                    .OrderBy(x => x.FarmType)
+                    .ToListAsync();
+
+                var economicSizeStats = await _context.Farms
+                    .Where(f => f.IsActive && f.EconomicSizeCategory != null)
+                    .GroupBy(f => f.EconomicSizeCategory)
+                    .Select(g => new { Category = g.Key, Count = g.Count() })
+                    .OrderBy(x => x.Category)
+                    .ToListAsync();
+
+                var municipalityStats = await _context.Farms
+                    .Where(f => f.IsActive && f.Municipality != null)
+                    .GroupBy(f => f.Municipality)
+                    .Select(g => new { Municipality = g.Key, Count = g.Count() })
+                    .OrderByDescending(x => x.Count)
+                    .Take(10)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    totalFarms,
+                    regionStats,
+                    farmTypeStats,
+                    economicSizeStats,
+                    topMunicipalities = municipalityStats
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving farm statistics");
+                return StatusCode(500, new { error = "Internal server error while retrieving statistics" });
+            }
+        }
+
+        /// <summary>
+        /// Import farms from CSV file
+        /// </summary>
+        [HttpPost("import-csv")]
+        public async Task<IActionResult> ImportFromCsv(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "No file uploaded or file is empty" });
+            }
+
+            if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { error = "File must be a CSV file" });
+            }
+
+            try
+            {
+                _logger.LogInformation("Starting CSV import of file: {FileName} (Size: {FileSize} bytes)", 
+                    file.FileName, file.Length);
+
+                using var stream = file.OpenReadStream();
+                var result = await _csvImportService.ImportFarmsFromCsvAsync(stream);
+
+                if (result.SuccessfulImports > 0)
+                {
+                    _logger.LogInformation("CSV import completed successfully. Imported {SuccessfulImports} farms", 
+                        result.SuccessfulImports);
+                    
+                    return Ok(new
+                    {
+                        message = "Import completed successfully",
+                        totalRecords = result.TotalRecords,
+                        successfulImports = result.SuccessfulImports,
+                        failedImports = result.FailedImports,
+                        errors = result.Errors
+                    });
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        message = "Import failed",
+                        totalRecords = result.TotalRecords,
+                        successfulImports = result.SuccessfulImports,
+                        failedImports = result.FailedImports,
+                        errors = result.Errors
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during CSV import");
+                return StatusCode(500, new { error = "Internal server error during import" });
+            }
+        }
+
+        /// <summary>
+        /// Clear all farm data (for testing purposes)
+        /// </summary>
+        [HttpDelete("clear-all")]
+        public async Task<IActionResult> ClearAllFarms()
+        {
+            try
+            {
+                await _csvImportService.ClearAllFarmsAsync();
+                _logger.LogInformation("All farm data cleared");
+                return Ok(new { message = "All farm data cleared successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing farm data");
+                return StatusCode(500, new { error = "Internal server error while clearing data" });
+            }
+        }
+
+        /// <summary>
+        /// Get farms count
+        /// </summary>
+        [HttpGet("count")]
+        public async Task<IActionResult> GetFarmsCount()
+        {
+            try
+            {
+                var count = await _csvImportService.GetFarmsCountAsync();
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting farms count");
+                return StatusCode(500, new { error = "Internal server error while getting count" });
+            }
+        }
+
+        /// <summary>
+        /// Get unique values for filtering
+        /// </summary>
+        [HttpGet("filter-options")]
+        public async Task<IActionResult> GetFilterOptions()
+        {
+            try
+            {
+                var regions = await _context.Farms
+                    .Where(f => f.IsActive && f.Region != null)
+                    .Select(f => f.Region)
+                    .Distinct()
+                    .OrderBy(r => r)
+                    .ToListAsync();
+
+                var municipalities = await _context.Farms
+                    .Where(f => f.IsActive && f.Municipality != null)
+                    .Select(f => f.Municipality)
+                    .Distinct()
+                    .OrderBy(m => m)
+                    .ToListAsync();
+
+                var farmTypes = await _context.Farms
+                    .Where(f => f.IsActive && f.FarmType != null)
+                    .Select(f => f.FarmType)
+                    .Distinct()
+                    .OrderBy(ft => ft)
+                    .ToListAsync();
+
+                var economicSizeCategories = await _context.Farms
+                    .Where(f => f.IsActive && f.EconomicSizeCategory != null)
+                    .Select(f => f.EconomicSizeCategory)
+                    .Distinct()
+                    .OrderBy(esc => esc)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    regions,
+                    municipalities,
+                    farmTypes,
+                    economicSizeCategories
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving filter options");
+                return StatusCode(500, new { error = "Internal server error while retrieving filter options" });
+            }
+        }
+    }
+}

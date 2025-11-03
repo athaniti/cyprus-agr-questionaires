@@ -1,0 +1,349 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using CyprusAgriculture.API.Data;
+using CyprusAgriculture.API.Models;
+using System.Text.Json;
+
+namespace CyprusAgriculture.API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class SamplesController : ControllerBase
+    {
+        private readonly CyprusAgricultureDbContext _context;
+        private readonly ILogger<SamplesController> _logger;
+
+        public SamplesController(CyprusAgricultureDbContext context, ILogger<SamplesController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        // GET: api/samples
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<object>>> GetSamples(
+            [FromQuery] string? status = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                _logger.LogInformation("Getting samples with status={Status}, page={Page}, pageSize={PageSize}",
+                    status, page, pageSize);
+
+                var query = _context.Samples
+                    .Include(s => s.Questionnaire)
+                    .Include(s => s.Creator)
+                    .AsQueryable();
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(s => s.Status == status);
+                }
+
+                var totalCount = await query.CountAsync();
+                var samples = await query
+                    .OrderByDescending(s => s.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(s => new
+                    {
+                        s.Id,
+                        s.Name,
+                        s.Description,
+                        s.TargetSize,
+                        s.CurrentSize,
+                        CompletionRate = s.TargetSize > 0 ? (double)s.CurrentSize / s.TargetSize * 100 : 0,
+                        s.Status,
+                        QuestionnaireName = s.Questionnaire.Name,
+                        s.QuestionnaireId,
+                        CreatedBy = s.Creator.FirstName + " " + s.Creator.LastName,
+                        s.CreatedAt,
+                        s.UpdatedAt,
+                        s.CompletedAt,
+                        FilterCriteria = JsonSerializer.Deserialize<object>(s.FilterCriteria)
+                    })
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    data = samples,
+                    totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving samples");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // GET: api/samples/{id}
+        [HttpGet("{id}")]
+        public async Task<ActionResult<object>> GetSample(Guid id)
+        {
+            try
+            {
+                var sample = await _context.Samples
+                    .Include(s => s.Questionnaire)
+                    .Include(s => s.Creator)
+                    .Include(s => s.Participants)
+                    .FirstOrDefaultAsync(s => s.Id == id);
+
+                if (sample == null)
+                {
+                    return NotFound(new { error = "Sample not found" });
+                }
+
+                return Ok(new
+                {
+                    sample.Id,
+                    sample.Name,
+                    sample.Description,
+                    sample.TargetSize,
+                    sample.CurrentSize,
+                    sample.Status,
+                    Questionnaire = new
+                    {
+                        sample.Questionnaire.Id,
+                        sample.Questionnaire.Name,
+                        sample.Questionnaire.Category
+                    },
+                    CreatedBy = sample.Creator.FirstName + " " + sample.Creator.LastName,
+                    sample.CreatedAt,
+                    sample.UpdatedAt,
+                    sample.CompletedAt,
+                    FilterCriteria = JsonSerializer.Deserialize<object>(sample.FilterCriteria),
+                    ParticipantsCount = sample.Participants.Count,
+                    Participants = sample.Participants.Select(p => new
+                    {
+                        p.Id,
+                        p.FarmName,
+                        p.OwnerName,
+                        p.Email,
+                        p.Municipality,
+                        p.District,
+                        p.Status
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving sample {Id}", id);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // POST: api/samples
+        [HttpPost]
+        public async Task<ActionResult<object>> CreateSample([FromBody] CreateSampleRequest request)
+        {
+            try
+            {
+                // Validate questionnaire exists
+                var questionnaire = await _context.Questionnaires.FindAsync(request.QuestionnaireId);
+                if (questionnaire == null)
+                {
+                    return BadRequest(new { error = "Questionnaire not found" });
+                }
+
+                var sample = new Sample
+                {
+                    Name = request.Name,
+                    Description = request.Description,
+                    TargetSize = request.TargetSize,
+                    QuestionnaireId = request.QuestionnaireId,
+                    FilterCriteria = JsonSerializer.Serialize(request.FilterCriteria ?? new object()),
+                    CreatedBy = request.CreatedBy,
+                    Status = "draft"
+                };
+
+                _context.Samples.Add(sample);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Sample created: {Id}", sample.Id);
+
+                return CreatedAtAction(nameof(GetSample), new { id = sample.Id }, new
+                {
+                    sample.Id,
+                    sample.Name,
+                    sample.Status,
+                    sample.CreatedAt,
+                    message = "Sample created successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating sample");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // PUT: api/samples/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateSample(Guid id, [FromBody] UpdateSampleRequest request)
+        {
+            try
+            {
+                var sample = await _context.Samples.FindAsync(id);
+                if (sample == null)
+                {
+                    return NotFound(new { error = "Sample not found" });
+                }
+
+                sample.Name = request.Name ?? sample.Name;
+                sample.Description = request.Description ?? sample.Description;
+                sample.TargetSize = request.TargetSize ?? sample.TargetSize;
+                sample.Status = request.Status ?? sample.Status;
+                
+                if (request.FilterCriteria != null)
+                {
+                    sample.FilterCriteria = JsonSerializer.Serialize(request.FilterCriteria);
+                }
+
+                sample.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Sample updated: {Id}", id);
+
+                return Ok(new { message = "Sample updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating sample {Id}", id);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // POST: api/samples/{id}/generate
+        [HttpPost("{id}/generate")]
+        public async Task<ActionResult<object>> GenerateSample(Guid id, [FromBody] GenerateSampleRequest request)
+        {
+            try
+            {
+                var sample = await _context.Samples.FindAsync(id);
+                if (sample == null)
+                {
+                    return NotFound(new { error = "Sample not found" });
+                }
+
+                // Για το demo, θα δημιουργήσουμε mock δεδομένα
+                var participants = GenerateMockParticipants(sample.TargetSize, request.FilterCriteria);
+
+                foreach (var participant in participants)
+                {
+                    participant.SampleId = sample.Id;
+                    _context.SampleParticipants.Add(participant);
+                }
+
+                sample.CurrentSize = participants.Count;
+                sample.Status = "active";
+                sample.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Generated {Count} participants for sample {Id}", participants.Count, id);
+
+                return Ok(new
+                {
+                    message = "Sample generated successfully",
+                    participantsCount = participants.Count,
+                    sample.CurrentSize,
+                    sample.TargetSize
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating sample {Id}", id);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        // DELETE: api/samples/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteSample(Guid id)
+        {
+            try
+            {
+                var sample = await _context.Samples.FindAsync(id);
+                if (sample == null)
+                {
+                    return NotFound(new { error = "Sample not found" });
+                }
+
+                _context.Samples.Remove(sample);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Sample deleted: {Id}", id);
+
+                return Ok(new { message = "Sample deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting sample {Id}", id);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        private List<SampleParticipant> GenerateMockParticipants(int targetSize, object? filterCriteria)
+        {
+            var participants = new List<SampleParticipant>();
+            var random = new Random();
+
+            var municipalities = new[] { "Λευκωσία", "Λεμεσός", "Λάρνακα", "Πάφος", "Αμμόχωστος" };
+            var farmTypes = new[] { "Κτηνοτροφία", "Φυτική Παραγωγή", "Μικτή Εκμετάλλευση" };
+            var economicSizes = new[] { "Μικρή", "Μεσαία", "Μεγάλη" };
+
+            for (int i = 0; i < targetSize; i++)
+            {
+                var municipality = municipalities[random.Next(municipalities.Length)];
+                var farmType = farmTypes[random.Next(farmTypes.Length)];
+                
+                participants.Add(new SampleParticipant
+                {
+                    FarmName = $"Εκμετάλλευση {i + 1}",
+                    OwnerName = $"Αγρότης {i + 1}",
+                    Email = $"farmer{i + 1}@example.com",
+                    Phone = $"99{random.Next(100000, 999999)}",
+                    Municipality = municipality,
+                    District = municipality,
+                    FarmType = farmType,
+                    FarmSize = random.Next(1, 100),
+                    EconomicSize = economicSizes[random.Next(economicSizes.Length)],
+                    Status = "active"
+                });
+            }
+
+            return participants;
+        }
+    }
+
+    // DTOs
+    public class CreateSampleRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int TargetSize { get; set; }
+        public Guid QuestionnaireId { get; set; }
+        public object? FilterCriteria { get; set; }
+        public Guid CreatedBy { get; set; }
+    }
+
+    public class UpdateSampleRequest
+    {
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public int? TargetSize { get; set; }
+        public string? Status { get; set; }
+        public object? FilterCriteria { get; set; }
+    }
+
+    public class GenerateSampleRequest
+    {
+        public object? FilterCriteria { get; set; }
+    }
+}

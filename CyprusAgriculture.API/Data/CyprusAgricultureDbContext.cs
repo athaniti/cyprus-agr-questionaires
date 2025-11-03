@@ -29,6 +29,10 @@ namespace CyprusAgriculture.API.Data
         public DbSet<QuestionnaireInvitation> QuestionnaireInvitations { get; set; }
         public DbSet<QuestionnaireQuota> QuestionnaireQuotas { get; set; }
         public DbSet<Location> Locations { get; set; }
+        public DbSet<Farm> Farms { get; set; }
+        public DbSet<Sample> Samples { get; set; }
+        public DbSet<SampleParticipant> SampleParticipants { get; set; }
+        public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Theme> Themes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -123,6 +127,79 @@ namespace CyprusAgriculture.API.Data
             {
                 entity.ToTable("themes");
                 entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+            });
+
+                        // Configure Sample entity  
+            modelBuilder.Entity<Sample>(entity =>
+            {
+                entity.ToTable("samples");
+                entity.HasKey(s => s.Id);
+                entity.Property(s => s.Id).HasColumnName("id");
+                entity.Property(s => s.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
+                entity.Property(s => s.Description).HasColumnName("description").HasMaxLength(1000);
+                entity.Property(s => s.TargetSize).HasColumnName("target_size").IsRequired();
+                entity.Property(s => s.CurrentSize).HasColumnName("current_size");
+                entity.Property(s => s.Status).HasColumnName("status").IsRequired().HasMaxLength(20);
+                entity.Property(s => s.FilterCriteria).HasColumnName("filter_criteria").HasColumnType("jsonb");
+                entity.Property(s => s.QuestionnaireId).HasColumnName("questionnaire_id");
+                entity.Property(s => s.CreatedBy).HasColumnName("created_by").IsRequired();
+                entity.Property(s => s.CreatedAt).HasColumnName("created_at");
+                entity.Property(s => s.UpdatedAt).HasColumnName("updated_at");
+                entity.Property(s => s.CompletedAt).HasColumnName("completed_at");
+            });
+
+            // Configure SampleParticipant entity
+            modelBuilder.Entity<SampleParticipant>(entity =>
+            {
+                entity.ToTable("sample_participants");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                entity.HasOne(sp => sp.Sample)
+                    .WithMany(s => s.Participants)
+                    .HasForeignKey(sp => sp.SampleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(sp => sp.Farm)
+                    .WithMany(f => f.SampleParticipants)
+                    .HasForeignKey(sp => sp.FarmId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure Invitation entity
+            modelBuilder.Entity<Invitation>(entity =>
+            {
+                entity.ToTable("invitations");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                entity.HasOne(i => i.Sample)
+                    .WithMany(s => s.Invitations)
+                    .HasForeignKey(i => i.SampleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(i => i.Questionnaire)
+                    .WithMany()
+                    .HasForeignKey(i => i.QuestionnaireId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(i => i.Participant)
+                    .WithMany(p => p.Invitations)
+                    .HasForeignKey(i => i.ParticipantId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(i => i.Creator)
+                    .WithMany()
+                    .HasForeignKey(i => i.CreatedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Configure Farm entity
+            modelBuilder.Entity<Farm>(entity =>
+            {
+                entity.ToTable("farms");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                // Create unique index on farm_code
+                entity.HasIndex(f => f.FarmCode).IsUnique();
             });
 
             // Seed initial data

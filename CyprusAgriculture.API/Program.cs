@@ -11,6 +11,9 @@ builder.Services.AddDbContext<CyprusAgricultureDbContext>(options =>
     options.UseSnakeCaseNamingConvention();
 });
 
+// Register custom services
+// builder.Services.AddScoped<ICsvImportService, CsvImportService>();
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
