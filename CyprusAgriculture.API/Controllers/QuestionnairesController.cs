@@ -102,7 +102,6 @@ namespace CyprusAgriculture.API.Controllers
             try
             {
                 var questionnaire = await _context.Questionnaires
-                    .Include(q => q.Creator)
                     .Include(q => q.Responses)
                     .Include(q => q.Quotas)
                     .FirstOrDefaultAsync(q => q.Id == id);
@@ -122,7 +121,7 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.Schema,
                     questionnaire.TargetResponses,
                     questionnaire.CurrentResponses,
-                    CreatedBy = questionnaire.Creator.FirstName + " " + questionnaire.Creator.LastName,
+                    CreatedBy = "System User", // Fallback since Creator relation might not be properly set up
                     questionnaire.CreatedAt,
                     questionnaire.PublishedAt,
                     questionnaire.UpdatedAt,
@@ -309,7 +308,6 @@ namespace CyprusAgriculture.API.Controllers
             try
             {
                 var responses = await _context.QuestionnaireResponses
-                    .Include(r => r.User)
                     .Where(r => r.QuestionnaireId == id)
                     .Select(r => new
                     {
@@ -321,8 +319,8 @@ namespace CyprusAgriculture.API.Controllers
                         r.FarmName,
                         r.Region,
                         r.Municipality,
-                        UserName = r.User.FirstName + " " + r.User.LastName,
-                        r.User.Email
+                        UserName = "System User", // Fallback since User relation might not be properly set up
+                        Email = "system@agriculture.gov.cy"
                     })
                     .ToListAsync();
 

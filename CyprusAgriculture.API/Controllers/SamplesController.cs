@@ -116,6 +116,54 @@ namespace CyprusAgriculture.API.Controllers
             }
         }
 
+        [HttpGet("{sampleId}/farms")]
+        public async Task<ActionResult<object>> GetSampleFarms(Guid sampleId)
+        {
+            try
+            {
+                var sample = await _context.Samples.FindAsync(sampleId);
+                if (sample == null)
+                {
+                    return NotFound(new { success = false, message = "Sample not found" });
+                }
+
+                var farms = await _context.SampleParticipants
+                    .Where(sp => sp.SampleId == sampleId)
+                    .Include(sp => sp.Farm)
+                    .Select(sp => new
+                    {
+                        sp.Farm!.Id,
+                        sp.Farm.FarmCode,
+                        sp.Farm.OwnerName,
+                        sp.Farm.Province,
+                        sp.Farm.Community,
+                        sp.Farm.FarmType,
+                        sp.Farm.TotalArea,
+                        sp.Farm.EconomicSize,
+                        sp.Farm.MainCrops,
+                        sp.Farm.LivestockTypes,
+                        sp.Farm.LegalStatus,
+                        sp.Status,
+                        sp.CreatedAt
+                    })
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    sampleId = sampleId,
+                    sampleName = sample.Name,
+                    farmsCount = farms.Count,
+                    farms = farms
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sample farms");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpPost("{sampleId}/generate")]
         public async Task<ActionResult<object>> GenerateSampleParticipants(Guid sampleId)
         {
@@ -205,6 +253,145 @@ namespace CyprusAgriculture.API.Controllers
             return await query.ToListAsync();
         }
 
+        [HttpPost("{sampleId}/assign")]
+        public async Task<ActionResult<object>> AssignSample(Guid sampleId, [FromBody] AssignSampleRequest request)
+        {
+            try
+            {
+                var sample = await _context.Samples
+                    .Include(s => s.Questionnaire)
+                    .FirstOrDefaultAsync(s => s.Id == sampleId);
+
+                if (sample == null)
+                {
+                    return NotFound(new { success = false, message = "Sample not found" });
+                }
+
+                // Remove existing assignments
+                var existingAssignments = await _context.SampleAssignments
+                    .Where(sa => sa.SampleId == sampleId)
+                    .ToListAsync();
+
+                if (existingAssignments.Any())
+                {
+                    _context.SampleAssignments.RemoveRange(existingAssignments);
+                }
+
+                // Create new assignments
+                var assignments = new List<SampleAssignment>();
+                foreach (var userId in request.UserIds)
+                {
+                    var assignment = new SampleAssignment
+                    {
+                        Id = Guid.NewGuid(),
+                        SampleId = sampleId,
+                        UserId = Guid.Parse(userId),
+                        AssignedBy = Guid.Parse("00000000-0000-0000-0000-000000000001"), // System user
+                        Notes = request.Notes,
+                        Status = "assigned",
+                        AssignedAt = DateTime.UtcNow,
+                        Region = "" // Will be updated based on user region
+                    };
+                    assignments.Add(assignment);
+                }
+
+                _context.SampleAssignments.AddRange(assignments);
+                
+                // Update sample status
+                sample.Status = "assigned";
+                
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Sample assigned to {request.UserIds.Count} users successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning sample");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("{sampleId}/unassign")]
+        public async Task<ActionResult<object>> UnassignSample(Guid sampleId)
+        {
+            try
+            {
+                var sample = await _context.Samples.FindAsync(sampleId);
+                if (sample == null)
+                {
+                    return NotFound(new { success = false, message = "Sample not found" });
+                }
+
+                // Remove all assignments
+                var assignments = await _context.SampleAssignments
+                    .Where(sa => sa.SampleId == sampleId)
+                    .ToListAsync();
+
+                _context.SampleAssignments.RemoveRange(assignments);
+                
+                // Update sample status
+                sample.Status = "active";
+                
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Sample unassigned successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unassigning sample");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{sampleId}")]
+        public async Task<ActionResult<object>> DeleteSample(Guid sampleId)
+        {
+            try
+            {
+                var sample = await _context.Samples.FindAsync(sampleId);
+                if (sample == null)
+                {
+                    return NotFound(new { success = false, message = "Sample not found" });
+                }
+
+                // Remove assignments first
+                var assignments = await _context.SampleAssignments
+                    .Where(sa => sa.SampleId == sampleId)
+                    .ToListAsync();
+                _context.SampleAssignments.RemoveRange(assignments);
+
+                // Remove participants
+                var participants = await _context.SampleParticipants
+                    .Where(sp => sp.SampleId == sampleId)
+                    .ToListAsync();
+                _context.SampleParticipants.RemoveRange(participants);
+
+                // Remove sample
+                _context.Samples.Remove(sample);
+                
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Sample deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting sample");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         private List<Farm> SelectRandomFarms(List<Farm> eligibleFarms, int sampleSize)
         {
             if (eligibleFarms.Count <= sampleSize)
@@ -225,6 +412,14 @@ namespace CyprusAgriculture.API.Controllers
         public int SampleSize { get; set; }
         public FilterCriteria? FilterCriteria { get; set; }
         public string? CreatedById { get; set; }
+    }
+
+    public class AssignSampleRequest
+    {
+        public List<string> UserIds { get; set; } = new();
+        public string? DueDate { get; set; }
+        public string? Notes { get; set; }
+        public string Priority { get; set; } = "medium";
     }
 
     public class FilterCriteria

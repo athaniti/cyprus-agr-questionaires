@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CyprusAgriculture.API.Data;
@@ -39,7 +40,7 @@ namespace CyprusAgriculture.API.Controllers
                     0, // current_size
                     "active",
                     "{}",
-                    (Guid?)null, // questionnaire_id
+                    DBNull.Value, // questionnaire_id
                     createdBy,
                     createdAt);
 
