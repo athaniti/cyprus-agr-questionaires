@@ -37,6 +37,11 @@ namespace CyprusAgriculture.API.Data
         public DbSet<SampleGroupFarm> SampleGroupFarms { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Theme> Themes { get; set; }
+        
+        // New FormIO-related entities
+        public DbSet<FormSchema> FormSchemas { get; set; }
+        public DbSet<FormResponse> FormResponses { get; set; }
+        public DbSet<SubmissionStatus> SubmissionStatuses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -282,6 +287,106 @@ namespace CyprusAgriculture.API.Data
 
                 // Create unique index on farm_code
                 entity.HasIndex(f => f.FarmCode).IsUnique();
+            });
+
+            // Configure FormSchema entity
+            modelBuilder.Entity<FormSchema>(entity =>
+            {
+                entity.ToTable("form_schemas");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                entity.HasOne(fs => fs.Questionnaire)
+                    .WithMany()
+                    .HasForeignKey(fs => fs.QuestionnaireId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(fs => fs.Creator)
+                    .WithMany()
+                    .HasForeignKey(fs => fs.CreatedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(fs => fs.Updater)
+                    .WithMany()
+                    .HasForeignKey(fs => fs.UpdatedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(fs => fs.QuestionnaireId);
+                entity.HasIndex(fs => new { fs.QuestionnaireId, fs.Version }).IsUnique();
+            });
+
+            // Configure FormResponse entity
+            modelBuilder.Entity<FormResponse>(entity =>
+            {
+                entity.ToTable("form_responses");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                entity.HasOne(fr => fr.Farm)
+                    .WithMany()
+                    .HasForeignKey(fr => fr.FarmId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(fr => fr.Questionnaire)
+                    .WithMany()
+                    .HasForeignKey(fr => fr.QuestionnaireId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(fr => fr.FormSchema)
+                    .WithMany(fs => fs.Responses)
+                    .HasForeignKey(fr => fr.FormSchemaId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(fr => fr.Interviewer)
+                    .WithMany()
+                    .HasForeignKey(fr => fr.InterviewerId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(fr => fr.Creator)
+                    .WithMany()
+                    .HasForeignKey(fr => fr.CreatedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(fr => fr.Updater)
+                    .WithMany()
+                    .HasForeignKey(fr => fr.UpdatedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(fr => fr.FarmId);
+                entity.HasIndex(fr => fr.QuestionnaireId);
+                entity.HasIndex(fr => fr.Status);
+                entity.HasIndex(fr => new { fr.FarmId, fr.QuestionnaireId }).IsUnique();
+            });
+
+            // Configure SubmissionStatus entity
+            modelBuilder.Entity<SubmissionStatus>(entity =>
+            {
+                entity.ToTable("submission_status");
+                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
+
+                entity.HasOne(ss => ss.Farm)
+                    .WithMany()
+                    .HasForeignKey(ss => ss.FarmId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ss => ss.Questionnaire)
+                    .WithMany()
+                    .HasForeignKey(ss => ss.QuestionnaireId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ss => ss.SampleGroup)
+                    .WithMany()
+                    .HasForeignKey(ss => ss.SampleGroupId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(ss => ss.AssignedInterviewer)
+                    .WithMany()
+                    .HasForeignKey(ss => ss.AssignedInterviewerId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(ss => ss.FarmId);
+                entity.HasIndex(ss => ss.QuestionnaireId);
+                entity.HasIndex(ss => ss.Status);
+                entity.HasIndex(ss => ss.AssignedInterviewerId);
+                entity.HasIndex(ss => new { ss.FarmId, ss.QuestionnaireId }).IsUnique();
             });
 
             // Seed initial data

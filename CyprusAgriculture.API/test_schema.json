@@ -1,0 +1,5 @@
+{
+  "name": "Έρευνα Ελαιοπαραγωγής Schema v1",
+  "schemaJson": "{\"components\":[{\"label\":\"Όνομα Εκμετάλλευσης\",\"key\":\"farmName\",\"type\":\"textfield\",\"input\":true,\"required\":true},{\"label\":\"Έκταση Ελαιώνων (εκτάρια)\",\"key\":\"oliveGroveArea\",\"type\":\"number\",\"input\":true,\"required\":true},{\"label\":\"Ποικιλίες Ελιάς\",\"key\":\"oliveVarieties\",\"type\":\"selectboxes\",\"input\":true,\"values\":[{\"label\":\"Κορωνέικη\",\"value\":\"koroneiki\"},{\"label\":\"Καλαμών\",\"value\":\"kalamon\"},{\"label\":\"Μαυρολιά\",\"value\":\"mavrolia\"}]},{\"label\":\"Ετήσια Παραγωγή (κιλά)\",\"key\":\"annualProduction\",\"type\":\"number\",\"input\":true},{\"label\":\"Τρόπος Συγκομιδής\",\"key\":\"harvestMethod\",\"type\":\"radio\",\"input\":true,\"values\":[{\"label\":\"Χειρωνακτικά\",\"value\":\"manual\"},{\"label\":\"Μηχανικά\",\"value\":\"mechanical\"},{\"label\":\"Μικτός\",\"value\":\"mixed\"}]},{\"label\":\"Πρόσθετες Παρατηρήσεις\",\"key\":\"notes\",\"type\":\"textarea\",\"input\":true}]}",
+  "createdBy": "00000000-0000-0000-0000-000000000001"
+}

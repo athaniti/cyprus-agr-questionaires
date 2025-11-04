@@ -8,6 +8,7 @@ import { FormPreview } from './components/FormPreview';
 import { UserManagement } from './components/UserManagement';
 import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
+import TestFormResponses from './pages/TestFormResponses';
 import { FormBuilder } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
 import '@formio/js/dist/formio.full.min.css';
@@ -467,6 +468,8 @@ function AppContent() {
             <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Αναφορές' : 'Reports'}</h2>
             <p className="text-gray-600">{language === 'el' ? 'Αναφορές και αναλύσεις' : 'Reports and analytics'}</p>
           </div>;
+        case 'form-responses':
+          return <TestFormResponses />;
         case 'users':
           return <UserManagement language={language} />;
         case 'settings':

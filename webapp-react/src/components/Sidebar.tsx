@@ -8,11 +8,11 @@ import {
   MapPin, 
   BarChart3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Database
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Button } from './ui/button';
-import { Separator } from './ui/separator';
 
 interface SidebarProps {
   currentView: string;
@@ -29,6 +29,7 @@ const translations = {
     quotas: 'Ποσοστώσεις',
     locations: 'Τοποθεσίες',
     reports: 'Αναφορές',
+    formResponses: 'Προβολή Απαντήσεων',
     ministry: 'Υπουργείο Γεωργίας'
   },
   en: {
@@ -39,6 +40,7 @@ const translations = {
     quotas: 'Quotas',
     locations: 'Locations',
     reports: 'Reports',
+    formResponses: 'Form Responses',
     ministry: 'Ministry of Agriculture'
   }
 };
@@ -50,6 +52,7 @@ export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
     { id: 'questionnaires', icon: FileText, label: t.questionnaires },
+    { id: 'form-responses', icon: Database, label: t.formResponses },
     { id: 'themes', icon: Palette, label: t.themes },
     { id: 'samples', icon: Send, label: t.samples },
     { id: 'quotas', icon: Target, label: t.quotas },
