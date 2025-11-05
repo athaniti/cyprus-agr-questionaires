@@ -1,0 +1,9 @@
+-- Simple demo questionnaires
+INSERT INTO questionnaires (id, name, description, category, status, schema, target_responses, current_responses, created_by, created_at, published_at)
+VALUES 
+    ('99999999-1111-1111-1111-111111111111', 'Grain Cultivation Survey 2025', 'Detailed survey on grain cultivation practices in Cyprus', 'Grains', 'active', '{"display":"form","components":[]}', 150, 0, '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days'),
+    ('99999999-2222-2222-2222-222222222222', 'Livestock Units Survey', 'Assessment of modern livestock practices in Cyprus', 'Livestock', 'active', '{"display":"form","components":[]}', 120, 0, '22222222-2222-2222-2222-222222222222', NOW() - INTERVAL '45 days', NOW() - INTERVAL '40 days'),
+    ('99999999-3333-3333-3333-333333333333', 'Irrigation Systems Survey', 'Study of water use and irrigation systems', 'Irrigation', 'active', '{"display":"form","components":[]}', 200, 0, '33333333-3333-3333-3333-333333333333', NOW() - INTERVAL '60 days', NOW() - INTERVAL '50 days'),
+    ('99999999-4444-4444-4444-444444444444', 'Organic Farming Survey', 'Assessment of organic cultivation practices', 'Organic Farming', 'draft', '{"display":"form","components":[]}', 80, 0, '11111111-1111-1111-1111-111111111111', NOW() - INTERVAL '10 days', NULL),
+    ('99999999-5555-5555-5555-555555555555', 'Greenhouse Cultivation Survey', 'Study of greenhouse production and technology', 'Greenhouses', 'active', '{"display":"form","components":[]}', 90, 0, '22222222-2222-2222-2222-222222222222', NOW() - INTERVAL '20 days', NOW() - INTERVAL '15 days')
+ON CONFLICT (id) DO NOTHING;

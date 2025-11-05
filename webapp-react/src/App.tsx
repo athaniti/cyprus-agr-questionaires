@@ -8,6 +8,7 @@ import { FormPreview } from './components/FormPreview';
 import { UserManagement } from './components/UserManagement';
 import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
+import { Themes } from './components/Themes';
 import TestFormResponses from './pages/TestFormResponses';
 import { FormBuilder } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
@@ -269,6 +270,32 @@ function AppContent() {
   };
 
   // Συνάρτηση για ανάθεση ερωτηματολογίου
+  const handleEditForm = (questionnaire: any) => {
+    console.log('Opening form builder for questionnaire:', questionnaire.id);
+    // Open form builder specifically for this questionnaire
+    setSelectedQuestionnaire(questionnaire);
+    setFormBuilderMode('edit');
+    setNewQuestionnaireName(questionnaire.name);
+    try {
+      const schema = questionnaire.schema || { components: [] };
+      setCurrentFormSchema(schema);
+      console.log('Loading questionnaire schema for form edit:', schema);
+    } catch (error) {
+      console.error('Error loading questionnaire schema:', error);
+      setCurrentFormSchema({ components: [] });
+    }
+    setShowFormBuilder(true);
+  };
+
+  const handleSelectTheme = (questionnaire: any) => {
+    console.log('Opening theme selector for questionnaire:', questionnaire.id);
+    // Here you would open a theme selection modal or component
+    alert(language === 'el' ? 
+      `Άνοιγμα επιλογής θέματος για: ${questionnaire.name}` : 
+      `Opening theme selection for: ${questionnaire.name}`
+    );
+  };
+
   const handleAssignQuestionnaire = (questionnaire: any) => {
     setAssignmentQuestionnaire(questionnaire);
     setShowAssignmentModal(true);
@@ -412,12 +439,24 @@ function AppContent() {
               name: 'Έρευνα Αρδευτικών Συστημάτων',
               description: 'Μελέτη των μεθόδων άρδευσης και της χρήσης νερού στις αγροτικές εκμεταλλεύσεις',
               category: 'Άρδευση',
-              status: 'active',
+              status: 'draft',
               currentResponses: 0,
               targetResponses: 80,
               completionRate: 0,
               createdAt: '2025-11-03T21:00:00Z',
-              samplesCount: 1
+              samplesCount: 0
+            },
+            {
+              id: 'dddddddd-4444-4444-4444-444444444444',
+              name: 'Έρευνα Βιολογικής Γεωργίας',
+              description: 'Πρόχειρη έρευνα για τις πρακτικές βιολογικής γεωργίας στην Κύπρο',
+              category: 'Βιολογική Γεωργία',
+              status: 'draft',
+              currentResponses: 0,
+              targetResponses: 60,
+              completionRate: 0,
+              createdAt: '2025-11-05T10:00:00Z',
+              samplesCount: 0
             }
           ]);
         }
@@ -428,12 +467,26 @@ function AppContent() {
           {
             id: 'aaaaaaaa-1111-1111-1111-111111111111',
             name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025',
+            description: 'Ετήσια έρευνα για την κατάσταση της ελαιοπαραγωγής στην Κύπρο',
             category: 'Φυτική Παραγωγή',
             status: 'active',
             currentResponses: 0,
             targetResponses: 100,
             completionRate: 0,
-            createdAt: '2025-11-03T21:00:00Z'
+            createdAt: '2025-11-03T21:00:00Z',
+            samplesCount: 1
+          },
+          {
+            id: 'dddddddd-4444-4444-4444-444444444444',
+            name: 'Έρευνα Βιολογικής Γεωργίας',
+            description: 'Πρόχειρη έρευνα για τις πρακτικές βιολογικής γεωργίας στην Κύπρο',
+            category: 'Βιολογική Γεωργία',
+            status: 'draft',
+            currentResponses: 0,
+            targetResponses: 60,
+            completionRate: 0,
+            createdAt: '2025-11-05T10:00:00Z',
+            samplesCount: 0
           }
         ]);
       }
@@ -472,6 +525,8 @@ function AppContent() {
           return <TestFormResponses />;
         case 'users':
           return <UserManagement language={language} />;
+        case 'themes':
+          return <Themes language={language} />;
         case 'settings':
           return <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Ρυθμίσεις' : 'Settings'}</h2>
@@ -550,58 +605,56 @@ function AppContent() {
                       </svg>
                     </button>
                     {questionnaire.status === 'draft' && (
-                      <button
-                        onClick={() => {
-                          setSelectedQuestionnaire(questionnaire);
-                          setFormBuilderMode('edit');
-                          setNewQuestionnaireName(questionnaire.name);
-                          // Φόρτωση schema από το questionnaire
-                          try {
-                            const schema = questionnaire.schema || { components: [] };
-                            setCurrentFormSchema(schema);
-                            console.log('Loading questionnaire schema for edit:', schema);
-                          } catch (error) {
-                            console.error('Error loading questionnaire schema:', error);
-                            setCurrentFormSchema({ components: [] });
-                          }
-                          setShowFormBuilder(true);
-                        }}
-                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title={language === 'el' ? 'Επεξεργασία' : 'Edit'}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                    )}
-                    {(questionnaire.status === 'draft' || questionnaire.status === 'active') && (
-                      <button
-                        onClick={() => handleAssignQuestionnaire(questionnaire)}
-                        className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title={language === 'el' ? 'Ανάθεση' : 'Assign'}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                        </svg>
-                      </button>
-                    )}
-                    {questionnaire.status === 'assigned' && (
-                      <button
-                        onClick={() => handleUnassignQuestionnaire(questionnaire)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title={language === 'el' ? 'Αποσυσχέτιση' : 'Unassign'}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
-                        </svg>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            setSelectedQuestionnaire(questionnaire);
+                            setFormBuilderMode('edit');
+                            setNewQuestionnaireName(questionnaire.name);
+                            // Φόρτωση schema από το questionnaire
+                            try {
+                              const schema = questionnaire.schema || { components: [] };
+                              setCurrentFormSchema(schema);
+                              console.log('Loading questionnaire schema for edit:', schema);
+                            } catch (error) {
+                              console.error('Error loading questionnaire schema:', error);
+                              setCurrentFormSchema({ components: [] });
+                            }
+                            setShowFormBuilder(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title={language === 'el' ? 'Επεξεργασία' : 'Edit'}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleEditForm(questionnaire)}
+                          className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title={language === 'el' ? 'Επεξεργασία Φόρμας' : 'Edit Form'}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleSelectTheme(questionnaire)}
+                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title={language === 'el' ? 'Επιλογή Θέματος' : 'Select Theme'}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
+                          </svg>
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={() => {
                         setSelectedQuestionnaire(questionnaire);
                         setShowPreview(true);
                       }}
-                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title={language === 'el' ? 'Προεπισκόπηση' : 'Preview'}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -82,13 +82,8 @@ export default function ResponsesViewer({
       // Extract the responses array
       const responsesArray = data.responses || [];
       
-      // If no real responses, add some mock data for demonstration
-      if (responsesArray.length === 0) {
-        const mockResponses = createMockResponses(questionnaireId);
-        setResponses(mockResponses);
-      } else {
-        setResponses(responsesArray);
-      }
+      // Set the responses from API or empty array if none found
+      setResponses(responsesArray);
     } catch (err) {
       console.error('Error fetching responses:', err);
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
@@ -143,9 +138,13 @@ export default function ResponsesViewer({
   const filteredResponses = (responses || []).filter(response => {
     const matchesSearch = !filters.search || 
       response.farm?.farmCode?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      response.farm?.ownerName?.toLowerCase().includes(filters.search.toLowerCase());
+      response.farm?.ownerName?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      response.farmId?.toLowerCase().includes(filters.search.toLowerCase());
     
-    return matchesSearch;
+    const matchesStatus = !filters.status || response.status === filters.status;
+    const matchesProvince = !filters.province || response.farm?.province === filters.province;
+    
+    return matchesSearch && matchesStatus && matchesProvince;
   });
 
   useEffect(() => {
@@ -311,16 +310,16 @@ export default function ResponsesViewer({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
                     <div className="text-sm font-medium text-gray-900">
-                      {response.farm.farmCode}
+                      {response.farm?.farmCode || response.farmId}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {response.farm.ownerName}
+                      {response.farm?.ownerName || 'Μη διαθέσιμο'}
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{response.farm.province}</div>
-                  <div className="text-sm text-gray-500">{response.farm.community}</div>
+                  <div className="text-sm text-gray-900">{response.farm?.province || 'Μη διαθέσιμο'}</div>
+                  <div className="text-sm text-gray-500">{response.farm?.community || 'Μη διαθέσιμο'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(response.status)}`}>

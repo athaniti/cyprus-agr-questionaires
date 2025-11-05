@@ -230,6 +230,7 @@ namespace CyprusAgriculture.API.Controllers
             try
             {
                 var query = _context.FormResponses
+                    .Include(fr => fr.Farm)
                     .Where(fr => fr.QuestionnaireId == questionnaireId);
 
                 if (!string.IsNullOrEmpty(status))
@@ -253,6 +254,13 @@ namespace CyprusAgriculture.API.Controllers
                     {
                         fr.Id,
                         fr.FarmId,
+                        Farm = fr.Farm != null ? new
+                        {
+                            FarmCode = fr.Farm.FarmCode,
+                            OwnerName = fr.Farm.OwnerName,
+                            Province = fr.Farm.Province,
+                            Community = fr.Farm.Community
+                        } : null,
                         fr.Status,
                         fr.CompletionPercentage,
                         fr.SubmittedAt,

@@ -64,25 +64,33 @@ export default function AnalyticsDashboard({
   const [interviewerPerformance, setInterviewerPerformance] = useState<InterviewerPerformance[]>([]);
   const [trends, setTrends] = useState<ResponseTrend[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedGroupBy, setSelectedGroupBy] = useState<'province' | 'community' | 'economic_size' | 'farm_type'>('province');
   const [selectedTrendDays, setSelectedTrendDays] = useState(30);
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/Analytics/questionnaire/${questionnaireId}/summary`);
+      console.log('Fetching analytics summary for questionnaire:', questionnaireId);
+      const response = await fetch(`${API_BASE_URL}/Analytics/questionnaire/${questionnaireId}/summary`);
+      console.log('Analytics summary response status:', response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log('Analytics summary data:', data);
         setSummary(data.summary);
+      } else {
+        console.error('Analytics summary failed:', response.status, response.statusText);
+        setError(`Failed to fetch summary: ${response.status}`);
       }
     } catch (error) {
       console.error('Error fetching summary:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
   const fetchSuccessRates = async () => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/Analytics/questionnaire/${questionnaireId}/success-rates?groupBy=${selectedGroupBy}`
+        `${API_BASE_URL}/Analytics/questionnaire/${questionnaireId}/success-rates?groupBy=${selectedGroupBy}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -96,7 +104,7 @@ export default function AnalyticsDashboard({
   const fetchInterviewerPerformance = async () => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/Analytics/questionnaire/${questionnaireId}/interviewer-performance`
+        `${API_BASE_URL}/Analytics/questionnaire/${questionnaireId}/interviewer-performance`
       );
       if (response.ok) {
         const data = await response.json();
@@ -110,7 +118,7 @@ export default function AnalyticsDashboard({
   const fetchTrends = async () => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/Analytics/questionnaire/${questionnaireId}/response-trends?days=${selectedTrendDays}`
+        `${API_BASE_URL}/Analytics/questionnaire/${questionnaireId}/response-trends?days=${selectedTrendDays}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -123,6 +131,7 @@ export default function AnalyticsDashboard({
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       await Promise.all([
         fetchSummary(),
@@ -130,6 +139,9 @@ export default function AnalyticsDashboard({
         fetchInterviewerPerformance(),
         fetchTrends()
       ]);
+    } catch (error) {
+      console.error('Error loading analytics data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load analytics data');
     } finally {
       setLoading(false);
     }
@@ -178,6 +190,31 @@ export default function AnalyticsDashboard({
         <span className="ml-2 text-gray-600">
           {language === 'el' ? 'Φόρτωση αναλυτικών στοιχείων...' : 'Loading analytics...'}
         </span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <div className="text-red-800">
+              <h3 className="text-sm font-medium">
+                {language === 'el' ? 'Σφάλμα φόρτωσης αναλυτικών' : 'Analytics Loading Error'}
+              </h3>
+              <div className="mt-2 text-sm">
+                <p>{error}</p>
+                <button 
+                  onClick={loadData}
+                  className="mt-2 px-3 py-1 bg-red-100 text-red-800 rounded text-sm hover:bg-red-200"
+                >
+                  {language === 'el' ? 'Δοκιμή ξανά' : 'Try Again'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

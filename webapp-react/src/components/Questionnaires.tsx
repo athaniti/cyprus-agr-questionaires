@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import { MoreHorizontal, Edit, Trash2, Copy, Plus, Search, MoreVertical, Eye, FileJson, Download } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, Copy, Plus, Search, MoreVertical, Eye, FileJson, Download, Palette } from 'lucide-react';
 import { apiService, Questionnaire } from '../services/api';
 
 interface QuestionnairesProps {
@@ -33,6 +33,8 @@ interface QuestionnairesProps {
   onCreateNew: () => void;
   onEditQuestionnaire: (id: string) => void;
   onViewQuestionnaire?: (id: string) => void;
+  onEditForm?: (id: string) => void;
+  onSelectTheme?: (id: string) => void;
 }
 
 const translations = {
@@ -51,6 +53,8 @@ const translations = {
     archived: 'Αρχειοθετημένο',
     completed: 'Ολοκληρωμένο',
     edit: 'Επεξεργασία',
+    editForm: 'Επεξεργασία Φόρμας',
+    selectTheme: 'Επιλογή Θέματος',
     duplicate: 'Αντιγραφή',
     delete: 'Διαγραφή',
     view: 'Προβολή',
@@ -75,6 +79,8 @@ const translations = {
     archived: 'Archived',
     completed: 'Completed',
     edit: 'Edit',
+    editForm: 'Edit Form',
+    selectTheme: 'Select Theme',
     duplicate: 'Duplicate',
     delete: 'Delete',
     view: 'View',
@@ -143,7 +149,7 @@ const mockQuestionnaires = [
   }
 ];
 
-export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onViewQuestionnaire }: QuestionnairesProps) {
+export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onViewQuestionnaire, onEditForm, onSelectTheme }: QuestionnairesProps) {
   const t = translations[language];
   const [searchQuery, setSearchQuery] = useState('');
   const [showSchemaDialog, setShowSchemaDialog] = useState(false);
@@ -228,13 +234,26 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
             name: 'Έρευνα Αρδευτικών Συστημάτων',
             description: 'Μελέτη των μεθόδων άρδευσης και της χρήσης νερού στις αγροτικές εκμεταλλεύσεις',
             category: 'Άρδευση',
-            status: 'active',
+            status: 'draft',
             currentResponses: 0,
             targetResponses: 80,
             completionRate: 0,
             createdAt: '2025-11-03T21:00:00Z',
-            samplesCount: 1,
-            samples: [{ id: '3', name: 'Δείγμα Αρδευτικών Συστημάτων', targetSize: 25, status: 'active' }]
+            samplesCount: 0,
+            samples: []
+          },
+          {
+            id: 'dddddddd-4444-4444-4444-444444444444',
+            name: 'Έρευνα Βιολογικής Γεωργίας',
+            description: 'Πρόχειρη έρευνα για τις πρακτικές βιολογικής γεωργίας στην Κύπρο',
+            category: 'Βιολογική Γεωργία',
+            status: 'draft',
+            currentResponses: 0,
+            targetResponses: 60,
+            completionRate: 0,
+            createdAt: '2025-11-05T10:00:00Z',
+            samplesCount: 0,
+            samples: []
           }
         ];
         console.log('Using fallback mock data:', cyprusMockData);
@@ -263,6 +282,32 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
         return { backgroundColor: '#F3F4F6', color: '#374151' };
       default:
         return { backgroundColor: '#F3F4F6', color: '#374151' };
+    }
+  };
+
+  const handleEditForm = (questionnaireId: string) => {
+    if (onEditForm) {
+      onEditForm(questionnaireId);
+    } else {
+      // Fallback if no callback provided
+      console.log('Editing form for questionnaire:', questionnaireId);
+      alert(language === 'el' ? 
+        'Άνοιγμα Form Builder για επεξεργασία φόρμας...' : 
+        'Opening Form Builder for form editing...'
+      );
+    }
+  };
+
+  const handleSelectTheme = (questionnaireId: string) => {
+    if (onSelectTheme) {
+      onSelectTheme(questionnaireId);
+    } else {
+      // Fallback if no callback provided
+      console.log('Selecting theme for questionnaire:', questionnaireId);
+      alert(language === 'el' ? 
+        'Άνοιγμα επιλογής θέματος...' : 
+        'Opening theme selection...'
+      );
     }
   };
 
@@ -463,10 +508,22 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEditQuestionnaire(questionnaire.id)} className="gap-2">
-                          <Edit className="h-4 w-4" />
-                          {t.edit}
-                        </DropdownMenuItem>
+                        {questionnaire.status === 'draft' && (
+                          <>
+                            <DropdownMenuItem onClick={() => onEditQuestionnaire(questionnaire.id)} className="gap-2">
+                              <Edit className="h-4 w-4" />
+                              {t.edit}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditForm(questionnaire.id)} className="gap-2">
+                              <FileJson className="h-4 w-4" />
+                              {t.editForm}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSelectTheme(questionnaire.id)} className="gap-2">
+                              <Palette className="h-4 w-4" />
+                              {t.selectTheme}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuItem 
                           onClick={() => onViewQuestionnaire && onViewQuestionnaire(questionnaire.id)} 
                           className="gap-2"
@@ -486,10 +543,12 @@ export function Questionnaires({ language, onCreateNew, onEditQuestionnaire, onV
                           <Download className="h-4 w-4" />
                           {t.export}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(questionnaire)} className="gap-2 text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                          {t.delete}
-                        </DropdownMenuItem>
+                        {questionnaire.status === 'draft' && (
+                          <DropdownMenuItem onClick={() => handleDelete(questionnaire)} className="gap-2 text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                            {t.delete}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
