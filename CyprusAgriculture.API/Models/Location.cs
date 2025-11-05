@@ -13,12 +13,18 @@ namespace CyprusAgriculture.API.Models
 
         [Required]
         [MaxLength(20)]
-        public string Type { get; set; } = string.Empty; // region, municipality, community
+        public string Type { get; set; } = string.Empty; // region, municipality, community, location
 
         [MaxLength(100)]
         public string? ParentName { get; set; }
 
         public Guid? ParentId { get; set; }
+
+        [MaxLength(100)]
+        public string? Municipality { get; set; }
+
+        [MaxLength(20)]
+        public string LocationLevel { get; set; } = "location"; // province, municipality, community, location
 
         [MaxLength(10)]
         public string? Code { get; set; }

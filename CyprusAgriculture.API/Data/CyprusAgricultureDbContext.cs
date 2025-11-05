@@ -43,6 +43,11 @@ namespace CyprusAgriculture.API.Data
         public DbSet<FormResponse> FormResponses { get; set; }
         public DbSet<SubmissionStatus> SubmissionStatuses { get; set; }
 
+        // Quota management entities
+        public DbSet<Quota> Quotas { get; set; }
+        public DbSet<QuotaResponse> QuotaResponses { get; set; }
+        public DbSet<QuotaVariable> QuotaVariables { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -387,6 +392,72 @@ namespace CyprusAgriculture.API.Data
                 entity.HasIndex(ss => ss.Status);
                 entity.HasIndex(ss => ss.AssignedInterviewerId);
                 entity.HasIndex(ss => new { ss.FarmId, ss.QuestionnaireId }).IsUnique();
+            });
+
+            // Configure Quota entity
+            modelBuilder.Entity<Quota>(entity =>
+            {
+                entity.ToTable("quotas");
+                
+                entity.Property(e => e.QuestionnaireId).HasColumnName("questionnaireid");
+                entity.Property(e => e.TargetCount).HasColumnName("targetcount");
+                entity.Property(e => e.IsActive).HasColumnName("isactive");
+                entity.Property(e => e.AutoStop).HasColumnName("autostop");
+                entity.Property(e => e.CreatedAt).HasColumnName("createdat");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updatedat");
+                entity.Property(e => e.CreatedBy).HasColumnName("createdby");
+                entity.Property(e => e.UpdatedBy).HasColumnName("updatedby");
+                
+                entity.HasOne(q => q.Questionnaire)
+                    .WithMany()
+                    .HasForeignKey(q => q.QuestionnaireId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(q => q.QuestionnaireId);
+                entity.HasIndex(q => q.IsActive);
+                entity.HasIndex(q => new { q.QuestionnaireId, q.Name });
+            });
+
+            // Configure QuotaResponse entity
+            modelBuilder.Entity<QuotaResponse>(entity =>
+            {
+                entity.ToTable("quotaresponses");
+
+                entity.Property(e => e.QuotaId).HasColumnName("quotaid");
+                entity.Property(e => e.ParticipantId).HasColumnName("participantid");
+                entity.Property(e => e.AllocationDate).HasColumnName("allocationdate");
+                entity.Property(e => e.StartDate).HasColumnName("startdate");
+                entity.Property(e => e.CompletionDate).HasColumnName("completiondate");
+                entity.Property(e => e.ResponseId).HasColumnName("responseid");
+                entity.Property(e => e.AllocatedBy).HasColumnName("allocatedby");
+                entity.Property(e => e.AllocationMethod).HasColumnName("allocationmethod");
+
+                entity.HasOne(qr => qr.Quota)
+                    .WithMany(q => q.QuotaResponses)
+                    .HasForeignKey(qr => qr.QuotaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(qr => qr.QuotaId);
+                entity.HasIndex(qr => qr.Status);
+            });
+
+            // Configure QuotaVariable entity
+            modelBuilder.Entity<QuotaVariable>(entity =>
+            {
+                entity.ToTable("quotavariables");
+
+                entity.Property(e => e.DisplayName).HasColumnName("displayname");
+                entity.Property(e => e.VariableType).HasColumnName("variabletype");
+                entity.Property(e => e.DataType).HasColumnName("datatype");
+                entity.Property(e => e.PossibleValues).HasColumnName("possiblevalues");
+                entity.Property(e => e.IsActive).HasColumnName("isactive");
+                entity.Property(e => e.SortOrder).HasColumnName("sortorder");
+                entity.Property(e => e.CreatedAt).HasColumnName("createdat");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updatedat");
+
+                entity.HasIndex(qv => qv.Name).IsUnique();
+                entity.HasIndex(qv => qv.IsActive);
+                entity.HasIndex(qv => qv.VariableType);
             });
 
             // Seed initial data

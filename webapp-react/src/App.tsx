@@ -9,6 +9,10 @@ import { UserManagement } from './components/UserManagement';
 import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
 import { Themes } from './components/Themes';
+import LocationManagementHub from './components/LocationManagementHub';
+import QuotaManagement from './components/QuotaManagement';
+import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
+import QuotaAllocationManager from './components/QuotaAllocationManager';
 import TestFormResponses from './pages/TestFormResponses';
 import { FormBuilder } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
@@ -512,10 +516,13 @@ function AppContent() {
         case 'samples':
           return <SampleManagement />;
         case 'locations':
-          return <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Τοποθεσίες' : 'Locations'}</h2>
-            <p className="text-gray-600">{language === 'el' ? 'Διαχείριση τοποθεσιών' : 'Location management'}</p>
-          </div>;
+          return <LocationManagementHub />;
+        case 'quotas':
+          return <QuotaManagement />;
+        case 'quota-monitoring':
+          return <QuotaMonitoringDashboard />;
+        case 'quota-allocation':
+          return <QuotaAllocationManager />;
         case 'reports':
           return <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Αναφορές' : 'Reports'}</h2>

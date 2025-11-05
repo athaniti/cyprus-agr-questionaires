@@ -9,7 +9,12 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  Database
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Monitor,
+  Users,
+  Settings
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Button } from './ui/button';
@@ -27,6 +32,9 @@ const translations = {
     themes: 'Θέματα',
     samples: 'Δείγματα & Προσκλήσεις',
     quotas: 'Ποσοστώσεις',
+    quotaManagement: 'Διαχείριση Ποσοστώσεων',
+    quotaMonitoring: 'Παρακολούθηση',
+    quotaAllocation: 'Κατανομή Συμμετεχόντων',
     locations: 'Τοποθεσίες',
     reports: 'Αναφορές',
     formResponses: 'Προβολή Απαντήσεων',
@@ -38,6 +46,9 @@ const translations = {
     themes: 'Themes',
     samples: 'Samples & Invitations',
     quotas: 'Quotas',
+    quotaManagement: 'Quota Management',
+    quotaMonitoring: 'Monitoring',
+    quotaAllocation: 'Participant Allocation',
     locations: 'Locations',
     reports: 'Reports',
     formResponses: 'Form Responses',
@@ -47,7 +58,16 @@ const translations = {
 
 export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['quotas']);
   const t = translations[language];
+
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(menuId) 
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
 
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
@@ -55,7 +75,17 @@ export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
     { id: 'form-responses', icon: Database, label: t.formResponses },
     { id: 'themes', icon: Palette, label: t.themes },
     { id: 'samples', icon: Send, label: t.samples },
-    { id: 'quotas', icon: Target, label: t.quotas },
+    { 
+      id: 'quotas', 
+      icon: Target, 
+      label: t.quotas,
+      hasSubMenu: true,
+      subItems: [
+        { id: 'quotas', icon: Settings, label: t.quotaManagement },
+        { id: 'quota-monitoring', icon: Monitor, label: t.quotaMonitoring },
+        { id: 'quota-allocation', icon: Users, label: t.quotaAllocation }
+      ]
+    },
     { id: 'locations', icon: MapPin, label: t.locations },
     { id: 'reports', icon: BarChart3, label: t.reports }
   ];
@@ -94,24 +124,72 @@ export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
         <div className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentView === item.id;
+            const isActive = currentView === item.id || 
+              (item.subItems && item.subItems.some(sub => currentView === sub.id));
+            const isExpanded = expandedMenus.includes(item.id);
             
             return (
-              <button
-                key={item.id}
-                onClick={() => onViewChange(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
-                  isActive 
-                    ? "text-white shadow-md" 
-                    : "text-gray-600 hover:bg-gray-50",
-                  isCollapsed && "justify-center"
+              <div key={item.id}>
+                <button
+                  onClick={() => {
+                    if (item.hasSubMenu && !isCollapsed) {
+                      toggleMenu(item.id);
+                    } else {
+                      onViewChange(item.id);
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
+                    isActive 
+                      ? "text-white shadow-md" 
+                      : "text-gray-600 hover:bg-gray-50",
+                    isCollapsed && "justify-center"
+                  )}
+                  style={isActive ? { backgroundColor: '#004B87' } : {}}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  {!isCollapsed && (
+                    <>
+                      <span className="text-sm flex-1 text-left">{item.label}</span>
+                      {item.hasSubMenu && (
+                        <ChevronDown 
+                          className={cn(
+                            "h-4 w-4 transition-transform",
+                            isExpanded && "rotate-180"
+                          )}
+                        />
+                      )}
+                    </>
+                  )}
+                </button>
+                
+                {/* Sub-menu items */}
+                {item.hasSubMenu && !isCollapsed && isExpanded && (
+                  <div className="ml-6 mt-1 space-y-1">
+                    {item.subItems?.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      const isSubActive = currentView === subItem.id;
+                      
+                      return (
+                        <button
+                          key={subItem.id}
+                          onClick={() => onViewChange(subItem.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm",
+                            isSubActive 
+                              ? "text-white shadow-sm" 
+                              : "text-gray-600 hover:bg-gray-50"
+                          )}
+                          style={isSubActive ? { backgroundColor: '#0C9A8F' } : {}}
+                        >
+                          <SubIcon className="h-4 w-4 flex-shrink-0" />
+                          <span className="text-left">{subItem.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
-                style={isActive ? { backgroundColor: '#004B87' } : {}}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span className="text-sm">{item.label}</span>}
-              </button>
+              </div>
             );
           })}
         </div>
