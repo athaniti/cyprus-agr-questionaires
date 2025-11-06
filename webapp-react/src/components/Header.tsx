@@ -48,19 +48,34 @@ export function Header({ language, onLanguageChange, userRole, user, onLogout }:
   const t = translations[language];
 
   return (
-    <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+    <div className="h-16 border-b border-gray-200 flex items-center justify-between px-6" style={{ backgroundColor: '#0e2f41' }}>
       {/* Left Section - Title */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm" style={{ backgroundColor: '#004B87' }}>
-            <span className="text-white text-lg">🌾</span>
+          <div className="w-12 h-12 flex items-center justify-center">
+            <img 
+              src="/cyprus-ministry-logo.png" 
+              alt="Cyprus Ministry Logo" 
+              className="w-12 h-12 object-contain"
+              onError={(e) => {
+                // Fallback to stylized text if image fails to load
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) {
+                  fallback.style.display = 'flex';
+                }
+              }}
+            />
+            <div className="hidden items-center justify-center w-12 h-12 rounded text-sm font-bold text-white" style={{ backgroundColor: '#004B87' }}>
+              <span>ΥΓ</span>
+            </div>
           </div>
           <div>
-            <h1 className="text-gray-900">
-              {language === 'el' ? 'Υπουργείο Γεωργίας Κύπρου' : 'Ministry of Agriculture Cyprus'}
+            <h1 className="text-white text-base font-semibold leading-tight">
+              {language === 'el' ? 'Υπουργείο Γεωργίας, Αγροτικής Ανάπτυξης και Περιβάλλοντος' : 'Ministry of Agriculture, Rural Development and Environment'}
             </h1>
-            <p className="text-xs text-gray-500">
-              {language === 'el' ? 'Σύστημα Διαχείρισης Ερωτηματολογίων' : 'Questionnaire Management System'}
+            <p className="text-xs text-gray-300">
+              {language === 'el' ? 'Δίκτυο Δεδομένων Βιωσιμότητας Γεωργικών Εκμεταλλεύσεων' : 'Farm Sustainability Data Network System'}
             </p>
           </div>
         </div>
@@ -73,7 +88,7 @@ export function Header({ language, onLanguageChange, userRole, user, onLogout }:
           variant="outline"
           size="sm"
           onClick={() => onLanguageChange(language === 'el' ? 'en' : 'el')}
-          className="gap-2 rounded-xl"
+          className="gap-2 rounded-xl border-gray-500 text-white hover:bg-gray-700 hover:text-white"
         >
           <Globe className="h-4 w-4" />
           <span>{language === 'el' ? 'ΕΛ' : 'EN'}</span>
@@ -82,7 +97,7 @@ export function Header({ language, onLanguageChange, userRole, user, onLogout }:
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="relative rounded-xl">
+            <Button variant="outline" size="icon" className="relative rounded-xl border-gray-500 text-white hover:bg-gray-700 hover:text-white">
               <Bell className="h-4 w-4" />
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full text-xs flex items-center justify-center text-white" style={{ backgroundColor: '#0C9A8F' }}>
                 3
@@ -112,7 +127,7 @@ export function Header({ language, onLanguageChange, userRole, user, onLogout }:
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 rounded-xl">
+            <Button variant="ghost" className="gap-2 rounded-xl text-white hover:bg-gray-700">
               <Avatar className="h-8 w-8">
                 <AvatarFallback style={{ backgroundColor: '#0C9A8F', color: 'white' }}>
                   <User className="h-4 w-4" />

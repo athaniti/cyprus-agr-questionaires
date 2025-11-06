@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  ChevronUp,
   Database,
   Monitor,
   Users,
@@ -23,6 +22,13 @@ interface SidebarProps {
   currentView: string;
   onViewChange: (view: string) => void;
   language: 'el' | 'en';
+  user?: {
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    role: string;
+  };
+  onLogout?: () => void;
 }
 
 const translations = {
@@ -31,8 +37,8 @@ const translations = {
     questionnaires: 'Ερωτηματολόγια',
     themes: 'Θέματα',
     samples: 'Δείγματα & Προσκλήσεις',
-    quotas: 'Ποσοστώσεις',
-    quotaManagement: 'Διαχείριση Ποσοστώσεων',
+    quotas: 'Όρια',
+    quotaManagement: 'Διαχείριση Ορίων',
     quotaMonitoring: 'Παρακολούθηση',
     quotaAllocation: 'Κατανομή Συμμετεχόντων',
     locations: 'Τοποθεσίες',
@@ -56,7 +62,7 @@ const translations = {
   }
 };
 
-export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, language, user, onLogout }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['quotas']);
   const t = translations[language];
@@ -97,25 +103,25 @@ export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-        {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#004B87' }}>
-              <span className="text-white">🌾</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs" style={{ color: '#004B87' }}>{t.ministry}</span>
-            </div>
-          </div>
-        )}
+      {/* Toggle Button at top - Better styling */}
+      <div className="p-2">
         <Button
           variant="ghost"
-          size="icon"
+          size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8"
+          className={cn(
+            "w-full flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-100 border border-gray-200 hover:border-gray-300",
+            isCollapsed ? "px-2" : ""
+          )}
         >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <>
+              <ChevronLeft className="h-4 w-4" />
+              <span className="text-xs">{language === 'el' ? 'Σύμπτυξη' : 'Collapse'}</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -195,14 +201,62 @@ export function Sidebar({ currentView, onViewChange, language }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Footer */}
-      {!isCollapsed && (
-        <div className="p-4 border-t border-gray-200">
-          <div className="text-xs text-gray-500 text-center">
-            v1.0.0 • Cyprus 2025
-          </div>
+      {/* Footer - Always visible */}
+      <div className="border-t-2 border-blue-200 bg-blue-50 flex-shrink-0 mt-auto">
+        <div className="p-3 space-y-2">
+          {user && !isCollapsed && (
+            <div className="border-b border-blue-200 pb-2 mb-2">
+              <div className="text-xs text-blue-800 font-semibold truncate">
+                {user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user.email
+                }
+              </div>
+              <div className="text-xs text-blue-600 truncate">
+                {user.email}
+              </div>
+              <div className="text-xs text-blue-500 capitalize">
+                {user.role === 'Administrator' ? (language === 'el' ? 'Διαχειριστής' : 'Administrator') :
+                 user.role === 'analyst' ? (language === 'el' ? 'Αναλυτής' : 'Analyst') :
+                 (language === 'el' ? 'Αγρότης' : 'Farmer')}
+              </div>
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="mt-1 text-xs text-red-600 hover:text-red-800 hover:underline"
+                >
+                  {language === 'el' ? 'Αποσύνδεση' : 'Logout'}
+                </button>
+              )}
+            </div>
+          )}
+          {user && isCollapsed && (
+            <div className="border-b border-blue-200 pb-2 mb-2">
+              <div className="text-xs text-blue-800 font-semibold text-center">
+                {user.firstName ? user.firstName.charAt(0) : user.email.charAt(0)}
+              </div>
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="mt-1 text-xs text-red-600 hover:text-red-800 w-full text-center"
+                  title={language === 'el' ? 'Αποσύνδεση' : 'Logout'}
+                >
+                  ↗
+                </button>
+              )}
+            </div>
+          )}
+          {!isCollapsed ? (
+            <div className="text-xs text-blue-700 text-center font-bold">
+              v1.0.0 • Cyprus 2025
+            </div>
+          ) : (
+            <div className="text-xs text-blue-700 text-center font-bold">
+              v1.0
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

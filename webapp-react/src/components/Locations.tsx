@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-import { Plus, Upload, Edit2, Trash2, Search, MapPin } from 'lucide-react';
+import { Plus, Upload, Trash2, Search, MapPin } from 'lucide-react';
 
 const locations = [
   {
@@ -89,9 +89,10 @@ export function Locations() {
   const { t, language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<typeof locations[0] | null>(null);
+  const [showImportSection, setShowImportSection] = useState(false);
   const [filterDistrict, setFilterDistrict] = useState<string>('all');
+
+  console.log('Locations render - showImportSection:', showImportSection);
 
   const filteredLocations = locations.filter(location => {
     const matchesSearch = 
@@ -113,29 +114,6 @@ export function Locations() {
   const totalFarmers = locations.reduce((sum, l) => sum + l.farmers, 0);
   const totalPopulation = locations.reduce((sum, l) => sum + l.population, 0);
 
-  const handleEditLocation = (location: typeof locations[0]) => {
-    setEditingLocation(location);
-    setIsEditOpen(true);
-  };
-
-  const handleCloseEdit = () => {
-    setIsEditOpen(false);
-    setEditingLocation(null);
-  };
-
-  const getDistrictValue = (location: typeof locations[0] | null) => {
-    if (!location) return undefined;
-    // Always use English name in lowercase for the value
-    const districtMap: Record<string, string> = {
-      'Nicosia': 'nicosia',
-      'Limassol': 'limassol',
-      'Larnaca': 'larnaca',
-      'Paphos': 'paphos',
-      'Famagusta': 'famagusta'
-    };
-    return districtMap[location.district.en] || undefined;
-  };
-
   return (
     <div className="p-6 space-y-6" style={{ backgroundColor: '#F5F6FA' }}>
       {/* Page Header */}
@@ -149,13 +127,17 @@ export function Locations() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            className="rounded-xl gap-2"
+          <button 
+            className="inline-flex items-center justify-center gap-2 rounded-xl border-4 border-red-500 bg-red-100 px-6 py-3 text-lg font-bold text-red-800 hover:bg-red-200 transition-colors cursor-pointer shadow-lg"
+            onClick={() => {
+              alert('Import button clicked!');
+              console.log('Import button clicked!');
+              setShowImportSection(true);
+            }}
           >
-            <Upload className="h-4 w-4" />
-            {t('locations.import')}
-          </Button>
+            <Upload className="h-5 w-5 text-red-800" />
+            <span className="text-red-800 font-bold">🔥 ΚΛΙΚ ΕΔΩ ΓΙΑ IMPORT 🔥</span>
+          </button>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button style={{ backgroundColor: '#004B87' }} className="text-white rounded-xl gap-2">
@@ -233,92 +215,6 @@ export function Locations() {
                     style={{ backgroundColor: '#004B87' }}
                     className="flex-1 text-white rounded-xl"
                     onClick={() => setIsCreateOpen(false)}
-                  >
-                    {t('save')}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Edit Dialog */}
-          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {language === 'el' ? 'Επεξεργασία Τοποθεσίας' : 'Edit Location'}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label>{t('locations.district')}</Label>
-                  <Select key={editingLocation?.id} defaultValue={getDistrictValue(editingLocation)}>
-                    <SelectTrigger className="mt-2 rounded-xl">
-                      <SelectValue placeholder={language === 'el' ? 'Επιλέξτε επαρχία' : 'Select district'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nicosia">{language === 'el' ? 'Λευκωσία' : 'Nicosia'}</SelectItem>
-                      <SelectItem value="limassol">{language === 'el' ? 'Λεμεσός' : 'Limassol'}</SelectItem>
-                      <SelectItem value="larnaca">{language === 'el' ? 'Λάρνακα' : 'Larnaca'}</SelectItem>
-                      <SelectItem value="paphos">{language === 'el' ? 'Πάφος' : 'Paphos'}</SelectItem>
-                      <SelectItem value="famagusta">{language === 'el' ? 'Αμμόχωστος' : 'Famagusta'}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>{t('locations.municipality')}</Label>
-                  <Input 
-                    placeholder={language === 'el' ? 'π.χ. Λευκωσία' : 'e.g. Nicosia'}
-                    defaultValue={editingLocation ? (language === 'el' ? editingLocation.municipality.el : editingLocation.municipality.en) : ''}
-                    className="mt-2 rounded-xl"
-                  />
-                </div>
-
-                <div>
-                  <Label>{t('locations.community')}</Label>
-                  <Input 
-                    placeholder={language === 'el' ? 'π.χ. Αγλαντζιά' : 'e.g. Aglandjia'}
-                    defaultValue={editingLocation ? (language === 'el' ? editingLocation.community.el : editingLocation.community.en) : ''}
-                    className="mt-2 rounded-xl"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>{t('locations.population')}</Label>
-                    <Input 
-                      type="number"
-                      placeholder="25000"
-                      defaultValue={editingLocation?.population}
-                      className="mt-2 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <Label>
-                      {language === 'el' ? 'Αριθμός Αγροτών' : 'Number of Farmers'}
-                    </Label>
-                    <Input 
-                      type="number"
-                      placeholder="150"
-                      defaultValue={editingLocation?.farmers}
-                      className="mt-2 rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 rounded-xl"
-                    onClick={handleCloseEdit}
-                  >
-                    {t('cancel')}
-                  </Button>
-                  <Button 
-                    style={{ backgroundColor: '#004B87' }}
-                    className="flex-1 text-white rounded-xl"
-                    onClick={handleCloseEdit}
                   >
                     {t('save')}
                   </Button>
@@ -490,14 +386,6 @@ export function Locations() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="h-8 w-8 p-0 rounded-lg"
-                        onClick={() => handleEditLocation(location)}
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-red-600">
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -509,6 +397,48 @@ export function Locations() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Simple Import Section */}
+      {showImportSection && (
+        <Card className="shadow-sm rounded-2xl border-2 border-green-500">
+          <CardHeader>
+            <CardTitle className="text-green-700">
+              🎉 Η Εισαγωγή Αρχείου Λειτουργεί!
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-green-600">
+                Επιτυχής σύνδεση! Το import button λειτουργεί σωστά.
+              </p>
+              <div className="flex gap-3">
+                <input 
+                  type="file" 
+                  accept=".csv"
+                  className="flex-1 p-2 border rounded-lg"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      alert(`Επιλέχθηκε αρχείο: ${e.target.files[0].name}`);
+                    }
+                  }}
+                />
+                <button 
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  onClick={() => alert('CSV Upload would happen here!')}
+                >
+                  Upload CSV
+                </button>
+                <button 
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  onClick={() => setShowImportSection(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

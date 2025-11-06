@@ -433,5 +433,112 @@ namespace CyprusAgriculture.API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        // GET: api/quotas/monitoring
+        [HttpGet("monitoring")]
+        public async Task<ActionResult<IEnumerable<object>>> GetQuotaMonitoring([FromQuery] Guid? questionnaireId = null)
+        {
+            try
+            {
+                var query = _context.Quotas
+                    .Include(q => q.QuotaResponses)
+                    .AsQueryable();
+
+                if (questionnaireId.HasValue)
+                {
+                    query = query.Where(q => q.QuestionnaireId == questionnaireId);
+                }
+
+                var quotas = await query.ToListAsync();
+
+                var monitoringData = quotas.Select(quota => 
+                {
+                    var completedCount = quota.QuotaResponses?.Count(r => r.Status == "completed") ?? 0;
+                    var inProgressCount = quota.QuotaResponses?.Count(r => r.Status == "in_progress") ?? 0;
+                    var pendingCount = quota.QuotaResponses?.Count(r => r.Status == "allocated") ?? 0;
+                    var totalResponses = quota.QuotaResponses?.Count ?? 0;
+                    var remainingCount = quota.TargetCount - completedCount;
+                    var completionPercentage = quota.TargetCount > 0 ? (double)completedCount / quota.TargetCount * 100 : 0;
+
+                    // Calculate today's completions
+                    var today = DateTime.UtcNow.Date;
+                    var todayCompletions = quota.QuotaResponses?.Count(r => 
+                        r.Status == "completed" && 
+                        r.CompletionDate.HasValue && 
+                        r.CompletionDate.Value.Date == today) ?? 0;
+
+                    // Calculate week completions
+                    var weekStart = today.AddDays(-(int)today.DayOfWeek);
+                    var weekCompletions = quota.QuotaResponses?.Count(r => 
+                        r.Status == "completed" && 
+                        r.CompletionDate.HasValue && 
+                        r.CompletionDate.Value.Date >= weekStart) ?? 0;
+
+                    // Determine status
+                    string status;
+                    if (completionPercentage >= 100)
+                        status = "Completed";
+                    else if (completionPercentage >= 80)
+                        status = "Near Completion";
+                    else if (completionPercentage > 0)
+                        status = "Active";
+                    else
+                        status = "Pending";
+
+                    // Calculate completion rate (completions per day)
+                    var activeDays = quota.QuotaResponses?.Any() == true ? 
+                        (DateTime.UtcNow - quota.CreatedAt).Days + 1 : 1;
+                    var completionRate = activeDays > 0 ? (double)completedCount / activeDays : 0;
+
+                    // Estimate completion date
+                    string estimatedCompletion = "";
+                    if (remainingCount > 0 && completionRate > 0)
+                    {
+                        var daysToComplete = Math.Ceiling(remainingCount / completionRate);
+                        var estimatedDate = DateTime.UtcNow.AddDays(daysToComplete);
+                        estimatedCompletion = estimatedDate.ToString("yyyy-MM-dd");
+                    }
+
+                    return new
+                    {
+                        id = quota.Id.ToString(),
+                        name = quota.Name,
+                        description = quota.Description,
+                        questionnaireName = "Ερωτηματολόγιο", // Default name
+                        criteria = JsonSerializer.Deserialize<object>(quota.Criteria),
+                        targetCount = quota.TargetCount,
+                        completedCount,
+                        inProgressCount,
+                        pendingCount,
+                        remainingCount = Math.Max(0, remainingCount),
+                        completionPercentage = Math.Round(completionPercentage, 1),
+                        status,
+                        isActive = quota.IsActive,
+                        lastCompletionTime = quota.QuotaResponses?
+                            .Where(r => r.Status == "completed" && r.CompletionDate.HasValue)
+                            .OrderByDescending(r => r.CompletionDate)
+                            .FirstOrDefault()?.CompletionDate?.ToString("yyyy-MM-dd HH:mm:ss"),
+                        todayCompletions,
+                        weekCompletions,
+                        averageCompletionTime = 15.5, // Mock data
+                        estimatedCompletion,
+                        completionRate = Math.Round(completionRate, 2),
+                        allocationProgress = new
+                        {
+                            allocatedCount = totalResponses,
+                            availableCount = Math.Max(0, quota.TargetCount - totalResponses),
+                            waitingCount = pendingCount
+                        }
+                    };
+                }).ToList();
+
+                return Ok(monitoringData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting quota monitoring data");
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { FormPreview } from './components/FormPreview';
 import { UserManagement } from './components/UserManagement';
 import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
 import { Themes } from './components/Themes';
+import { ThemeSelector } from './components/ThemeSelector';
 import LocationManagementHub from './components/LocationManagementHub';
 import QuotaManagement from './components/QuotaManagement';
 import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
@@ -115,6 +117,13 @@ if (typeof document !== 'undefined') {
 }
 
 function AppContent() {
+  const { user, isAuthenticated, logout } = useAuth();
+  
+  // Εάν ο χρήστης δεν είναι συνδεδεμένος, εμφάνισε το Login
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   const [currentView, setCurrentView] = useState('dashboard');
   const [language, setLanguage] = useState<'el' | 'en'>('el');
   
@@ -130,6 +139,8 @@ function AppContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentQuestionnaire, setAssignmentQuestionnaire] = useState<any>(null);
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [themeSelectorQuestionnaire, setThemeSelectorQuestionnaire] = useState<any>(null);
 
   // Mock users data (in real app would come from API)
   const mockUsers = [
@@ -293,11 +304,34 @@ function AppContent() {
 
   const handleSelectTheme = (questionnaire: any) => {
     console.log('Opening theme selector for questionnaire:', questionnaire.id);
-    // Here you would open a theme selection modal or component
-    alert(language === 'el' ? 
-      `Άνοιγμα επιλογής θέματος για: ${questionnaire.name}` : 
-      `Opening theme selection for: ${questionnaire.name}`
-    );
+    setThemeSelectorQuestionnaire(questionnaire);
+    setShowThemeSelector(true);
+  };
+
+  const handleThemeSelection = (theme: any) => {
+    if (themeSelectorQuestionnaire) {
+      console.log('Applying theme to questionnaire:', {
+        questionnaireId: themeSelectorQuestionnaire.id,
+        themeId: theme.id,
+        themeName: theme.name
+      });
+
+      // Update questionnaire with selected theme
+      setQuestionnaires(prev => prev.map(q => 
+        q.id === themeSelectorQuestionnaire.id 
+          ? { ...q, theme: theme, updatedAt: new Date().toISOString() }
+          : q
+      ));
+
+      alert(
+        language === 'el' 
+          ? `Θέμα "${theme.name}" εφαρμόστηκε επιτυχώς στο ερωτηματολόγιο "${themeSelectorQuestionnaire.name}"!`
+          : `Theme "${theme.name}" applied successfully to questionnaire "${themeSelectorQuestionnaire.name}"!`
+      );
+
+      setShowThemeSelector(false);
+      setThemeSelectorQuestionnaire(null);
+    }
   };
 
   const handleAssignQuestionnaire = (questionnaire: any) => {
@@ -498,13 +532,6 @@ function AppContent() {
 
     loadQuestionnaires();
   }, []);
-
-  // Mock user
-  const mockUser = {
-    firstName: 'Admin',
-    lastName: 'User',
-    email: 'admin@example.com'
-  };
 
   const renderView = () => {
     try {
@@ -741,23 +768,34 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#F5F6FA' }}>
-      {/* Sidebar */}
-      <Sidebar
-        currentView={currentView}
-        onViewChange={setCurrentView}
+    <div className="flex flex-col h-screen overflow-hidden" style={{ backgroundColor: '#F5F6FA' }}>
+      {/* Header - Full Width */}
+      <Header
         language={language}
+        onLanguageChange={setLanguage}
+        userRole={user?.role === 'Administrator' ? 'admin' : user?.role === 'analyst' ? 'analyst' : 'farmer'}
+        user={user ? {
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email
+        } : undefined}
+        onLogout={logout}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <Header
+      {/* Main Content Area with Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          currentView={currentView}
+          onViewChange={setCurrentView}
           language={language}
-          onLanguageChange={setLanguage}
-          userRole="admin"
-          user={mockUser}
-          onLogout={() => console.log('Logout clicked')}
+          user={user ? {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role
+          } : undefined}
+          onLogout={logout}
         />
 
         {/* Content */}
@@ -1118,6 +1156,21 @@ function AppContent() {
             setAssignmentQuestionnaire(null);
           }}
           onAssign={handleQuestionnaireAssignment}
+          language={language}
+        />
+      )}
+
+      {/* Theme Selector Modal */}
+      {showThemeSelector && themeSelectorQuestionnaire && (
+        <ThemeSelector
+          isOpen={showThemeSelector}
+          onClose={() => {
+            setShowThemeSelector(false);
+            setThemeSelectorQuestionnaire(null);
+          }}
+          onThemeSelect={handleThemeSelection}
+          questionnaireName={themeSelectorQuestionnaire.name}
+          currentThemeId={themeSelectorQuestionnaire.theme?.id}
           language={language}
         />
       )}

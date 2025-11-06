@@ -505,25 +505,31 @@ namespace CyprusAgriculture.API.Controllers
                                     var municipalityLocation = await _context.Locations
                                         .FirstOrDefaultAsync(l => l.Name == item.Municipality && l.Type == "municipality" && l.ParentId == provinceLocation.Id && l.IsActive);
                                     
-                                    var communityExists = await _context.Locations
-                                        .AnyAsync(l => l.Name == item.Community && l.Type == "community" && l.ParentId == municipalityLocation!.Id && l.IsActive);
-                                    
-                                    if (!communityExists)
+                                    if (municipalityLocation != null)
                                     {
-                                        item.Status = $"Σφάλμα: Η κοινότητα '{item.Community}' δεν βρέθηκε";
-                                    }
-                                    else
-                                    {
-                                        // Check if location already exists
-                                        var communityLocation = await _context.Locations
-                                            .FirstOrDefaultAsync(l => l.Name == item.Community && l.Type == "community" && l.ParentId == municipalityLocation.Id && l.IsActive);
+                                        var communityExists = await _context.Locations
+                                            .AnyAsync(l => l.Name == item.Community && l.Type == "community" && l.ParentId == municipalityLocation.Id && l.IsActive);
                                         
-                                        var exists = await _context.Locations
-                                            .AnyAsync(l => l.Name == item.Name && l.ParentId == communityLocation!.Id && l.Type == "location");
-                                        
-                                        if (exists)
+                                        if (!communityExists)
                                         {
-                                            item.Status = "Υπάρχει ήδη";
+                                            item.Status = $"Σφάλμα: Η κοινότητα '{item.Community}' δεν βρέθηκε";
+                                        }
+                                        else
+                                        {
+                                            // Check if location already exists
+                                            var communityLocation = await _context.Locations
+                                                .FirstOrDefaultAsync(l => l.Name == item.Community && l.Type == "community" && l.ParentId == municipalityLocation.Id && l.IsActive);
+                                            
+                                            if (communityLocation != null)
+                                            {
+                                                var exists = await _context.Locations
+                                                    .AnyAsync(l => l.Name == item.Name && l.ParentId == communityLocation.Id && l.Type == "location");
+                                                
+                                                if (exists)
+                                                {
+                                                    item.Status = "Υπάρχει ήδη";
+                                                }
+                                            }
                                         }
                                     }
                                 }

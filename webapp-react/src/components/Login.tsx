@@ -11,9 +11,9 @@ export function Login({ onLogin }: LoginProps) {
   const { login, loading } = useAuth();
 
   const testUsers = [
-    { email: 'admin@agriculture.gov.cy', role: 'Administrator' },
-    { email: 'user@agriculture.gov.cy', role: 'Analyst' },
-    { email: 'farmer@email.com', role: 'Farmer' },
+    { email: 'admin@agriculture.gov.cy', role: 'Διαχειριστής' },
+    { email: 'user@agriculture.gov.cy', role: 'Αναλυτής' },
+    { email: 'farmer@email.com', role: 'Αγρότης' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ export function Login({ onLogin }: LoginProps) {
     setError('');
 
     if (!email) {
-      setError('Please enter an email address');
+      setError('Παρακαλώ εισάγετε μια διεύθυνση email');
       return;
     }
 
@@ -30,10 +30,10 @@ export function Login({ onLogin }: LoginProps) {
       if (success && onLogin) {
         onLogin();
       } else if (!success) {
-        setError('Login failed. Please check your email and try again.');
+        setError('Η σύνδεση απέτυχε. Παρακαλώ ελέγξτε το email σας και δοκιμάστε ξανά.');
       }
     } catch (err) {
-      setError('An error occurred during login. Please try again.');
+      setError('Προέκυψε σφάλμα κατά τη σύνδεση. Παρακαλώ δοκιμάστε ξανά.');
     }
   };
 
@@ -46,10 +46,10 @@ export function Login({ onLogin }: LoginProps) {
       if (success && onLogin) {
         onLogin();
       } else if (!success) {
-        setError('Login failed for test user.');
+        setError('Η σύνδεση απέτυχε για τον δοκιμαστικό χρήστη.');
       }
     } catch (err) {
-      setError('An error occurred during login. Please try again.');
+      setError('Προέκυψε σφάλμα κατά τη σύνδεση. Παρακαλώ δοκιμάστε ξανά.');
     }
   };
 
@@ -57,18 +57,28 @@ export function Login({ onLogin }: LoginProps) {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
+          <div className="flex justify-center mb-4">
+            <img
+              src="/cyprus-ministry-logo.png"
+              alt="Λογότυπο Υπουργείου Γεωργίας Κύπρου"
+              className="h-20 w-auto object-contain"
+            />
+          </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Cyprus Agriculture Questionnaires
+            Δίκτυο Δεδομένων Γεωργικών Εκμεταλλεύσεων
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to your account
+            Υπουργείο Γεωργίας, Αγροτικής Ανάπτυξης και Περιβάλλοντος
+          </p>
+          <p className="mt-1 text-center text-sm text-gray-500">
+            Συνδεθείτε στον λογαριασμό σας
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="email" className="sr-only">
-              Email address
+              Διεύθυνση Email
             </label>
             <input
               id="email"
@@ -76,8 +86,8 @@ export function Login({ onLogin }: LoginProps) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              placeholder="Email address"
+              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0e2f41] focus:border-[#0e2f41] focus:z-10 sm:text-sm"
+              placeholder="Διεύθυνση email"
               disabled={loading}
             />
           </div>
@@ -92,9 +102,9 @@ export function Login({ onLogin }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#0e2f41] hover:bg-[#1a4152] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0e2f41] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? 'Σύνδεση...' : 'Σύνδεση'}
             </button>
           </div>
 
@@ -104,7 +114,7 @@ export function Login({ onLogin }: LoginProps) {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 text-gray-500">Demo Users</span>
+                <span className="px-2 bg-gray-50 text-gray-500">Δοκιμαστικοί Χρήστες</span>
               </div>
             </div>
 
@@ -126,8 +136,8 @@ export function Login({ onLogin }: LoginProps) {
         </form>
 
         <div className="mt-6 text-center text-xs text-gray-500">
-          <p>For demo purposes, any password will work</p>
-          <p>Click on demo users above for quick login</p>
+          <p>Για σκοπούς επίδειξης, οποιοσδήποτε κωδικός θα λειτουργήσει</p>
+          <p>Κάντε κλικ στους παραπάνω δοκιμαστικούς χρήστες για γρήγορη σύνδεση</p>
         </div>
       </div>
     </div>
