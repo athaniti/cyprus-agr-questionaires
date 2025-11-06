@@ -11,7 +11,7 @@ import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
 import { Themes } from './components/Themes';
 import { ThemeSelector } from './components/ThemeSelector';
-import InvitationManager from './components/InvitationManager';
+import InvitationManagement from './components/InvitationManagement';
 import LocationManagementHub from './components/LocationManagementHub';
 import QuotaManagement from './components/QuotaManagement';
 import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
@@ -667,7 +667,7 @@ function AppContent() {
         case 'samples':
           return <SampleManagement />;
         case 'invitations':
-          return <InvitationManager />;
+          return <InvitationManagement />;
         case 'locations':
           return <LocationManagementHub />;
         case 'quotas':
