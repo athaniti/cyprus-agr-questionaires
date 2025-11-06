@@ -11,6 +11,7 @@ import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
 import { Themes } from './components/Themes';
 import { ThemeSelector } from './components/ThemeSelector';
+import InvitationManager from './components/InvitationManager';
 import LocationManagementHub from './components/LocationManagementHub';
 import QuotaManagement from './components/QuotaManagement';
 import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
@@ -97,14 +98,30 @@ const formioCSS = `
     background: #f8f9fa !important;
     cursor: move !important;
   }
-  
-  /* FormIO Modal z-index fix */
+
+  /* MINIMAL FormIO Modal Fixes - Only what's necessary */
   .formio-dialog,
-  .modal.show {
+  .formio-component-edit {
     z-index: 10000 !important;
   }
-  
-  .modal-backdrop.show {
+
+  /* Ensure modal buttons work */
+  .formio-dialog .btn,
+  .formio-dialog .close,
+  .formio-dialog button {
+    pointer-events: auto !important;
+    z-index: auto !important;
+    cursor: pointer !important;
+  }
+
+  /* Basic modal visibility */
+  .formio-dialog.show,
+  .modal.show {
+    display: block !important;
+  }
+
+  /* Modal backdrop shouldn't interfere */
+  .modal-backdrop {
     z-index: 9999 !important;
   }
 `;
@@ -114,8 +131,45 @@ if (typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = formioCSS;
   document.head.appendChild(style);
-}
 
+  const configureFormIO = () => {
+    try {
+      const windowWithFormio = window as any;
+      if (windowWithFormio.Formio) {
+        // Disable project URL and set local configuration
+        windowWithFormio.Formio.setProjectUrl('');
+        windowWithFormio.Formio.setBaseUrl('');
+        windowWithFormio.Formio.projectId = 'local-offline-project';
+        
+        // Disable ACE worker if available
+        if (windowWithFormio.ace && windowWithFormio.ace.config) {
+          windowWithFormio.ace.config.set('useWorker', false);
+          windowWithFormio.ace.config.set('useWorkerFromCDN', false);
+        }
+      }
+    } catch (error) {
+      console.warn('FormIO early configuration warning:', error);
+    }
+  };
+
+  // Run configuration immediately and after DOM loads
+  configureFormIO();
+  document.addEventListener('DOMContentLoaded', configureFormIO);
+  window.addEventListener('load', configureFormIO);
+
+  // Suppress specific FormIO console warnings
+  const originalConsoleWarn = console.warn;
+  console.warn = function(...args) {
+    const message = args.join(' ');
+    // Suppress specific FormIO warnings
+    if (message.includes('Missing projectId') || 
+        message.includes('isUseWorkerDisabled') ||
+        message.includes('misspelled option')) {
+      return;
+    }
+    originalConsoleWarn.apply(console, args);
+  };
+}
 function AppContent() {
   const { user, isAuthenticated, logout } = useAuth();
   
@@ -123,6 +177,76 @@ function AppContent() {
   if (!isAuthenticated) {
     return <Login />;
   }
+
+  // Simple FormIO modal fix
+  useEffect(() => {
+    // Minimal fix for FormIO modals - only fix what's absolutely necessary
+    const fixFormIOModals = () => {
+      // Only target specific FormIO modals that are showing
+      const modals = document.querySelectorAll('.formio-dialog.show, .modal.show[class*="formio"]');
+      
+      modals.forEach(modal => {
+        if (modal instanceof HTMLElement) {
+          // Ensure modal is visible and interactive (minimal intervention)
+          modal.style.zIndex = '10000';
+          modal.style.pointerEvents = 'auto';
+          
+          // Fix only the save and close buttons
+          const buttons = modal.querySelectorAll('.btn, .close, button');
+          buttons.forEach(btn => {
+            if (btn instanceof HTMLElement) {
+              btn.style.pointerEvents = 'auto';
+              btn.style.zIndex = 'auto';
+            }
+          });
+        }
+      });
+    };
+
+    // Run fix when DOM changes (but not aggressively)
+    const observer = new MutationObserver(() => {
+      setTimeout(fixFormIOModals, 100);
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Additional FormIO modal fix - handle click events properly
+  useEffect(() => {
+    const handleModalClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      
+      // Handle close button clicks
+      if (target.matches('.close, .btn-close, [data-dismiss="modal"], [data-bs-dismiss="modal"]')) {
+        e.stopPropagation();
+        const modal = target.closest('.modal, .formio-dialog');
+        if (modal && modal instanceof HTMLElement) {
+          modal.style.display = 'none';
+          // Remove modal backdrop
+          const backdrop = document.querySelector('.modal-backdrop');
+          if (backdrop) {
+            backdrop.remove();
+          }
+        }
+      }
+      
+      // Handle save button clicks in FormIO modals
+      if (target.matches('.btn-primary, [type="submit"]') && target.closest('.formio-dialog, .modal[class*="formio"]')) {
+        // Let FormIO handle the save, but ensure the event propagates
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener('click', handleModalClick, true);
+    return () => document.removeEventListener('click', handleModalClick, true);
+  }, []);
 
   const [currentView, setCurrentView] = useState('dashboard');
   const [language, setLanguage] = useState<'el' | 'en'>('el');
@@ -542,6 +666,8 @@ function AppContent() {
           return renderQuestionnaires();
         case 'samples':
           return <SampleManagement />;
+        case 'invitations':
+          return <InvitationManager />;
         case 'locations':
           return <LocationManagementHub />;
         case 'quotas':
@@ -1054,8 +1180,8 @@ function AppContent() {
 
       {/* Form Builder Modal */}
       {showFormBuilder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 1000 }}>
-          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4 flex flex-col" style={{ zIndex: 1001 }}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 9000 }}>
+          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4 flex flex-col" style={{ zIndex: 9001 }}>
             <div className="px-8 py-6 border-b border-gray-200 flex-shrink-0" style={{ backgroundColor: '#004B87' }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white">

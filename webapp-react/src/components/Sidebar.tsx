@@ -13,7 +13,8 @@ import {
   Database,
   Monitor,
   Users,
-  Settings
+  Settings,
+  Mail
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { Button } from './ui/button';
@@ -36,7 +37,8 @@ const translations = {
     dashboard: 'Πίνακας Ελέγχου',
     questionnaires: 'Ερωτηματολόγια',
     themes: 'Θέματα',
-    samples: 'Δείγματα & Προσκλήσεις',
+    samples: 'Δείγματα',
+    invitations: 'Προσκλήσεις',
     quotas: 'Όρια',
     quotaManagement: 'Διαχείριση Ορίων',
     quotaMonitoring: 'Παρακολούθηση',
@@ -50,7 +52,8 @@ const translations = {
     dashboard: 'Dashboard',
     questionnaires: 'Questionnaires',
     themes: 'Themes',
-    samples: 'Samples & Invitations',
+    samples: 'Samples',
+    invitations: 'Invitations',
     quotas: 'Quotas',
     quotaManagement: 'Quota Management',
     quotaMonitoring: 'Monitoring',
@@ -81,6 +84,7 @@ export function Sidebar({ currentView, onViewChange, language, user, onLogout }:
     { id: 'form-responses', icon: Database, label: t.formResponses },
     { id: 'themes', icon: Palette, label: t.themes },
     { id: 'samples', icon: Send, label: t.samples },
+    { id: 'invitations', icon: Mail, label: t.invitations },
     { 
       id: 'quotas', 
       icon: Target, 

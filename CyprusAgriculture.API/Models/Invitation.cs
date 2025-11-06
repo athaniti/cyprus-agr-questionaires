@@ -3,6 +3,27 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CyprusAgriculture.API.Models
 {
+    public enum InvitationStatus
+    {
+        Draft = 0,
+        Scheduled = 1,
+        Sent = 2,
+        Delivered = 3,
+        Failed = 4,
+        Opened = 5,
+        Clicked = 6,
+        Started = 7,
+        Completed = 8
+    }
+
+    public enum DeliveryStatus
+    {
+        Pending = 0,
+        Delivered = 1,
+        Failed = 2,
+        Bounced = 3
+    }
+
     public class Invitation
     {
         [Key]
@@ -15,6 +36,12 @@ namespace CyprusAgriculture.API.Models
         [MaxLength(1000)]
         public string? Description { get; set; }
 
+        // Batch relationship
+        public Guid? BatchId { get; set; }
+
+        [ForeignKey(nameof(BatchId))]
+        public virtual InvitationBatch? Batch { get; set; }
+
         [Required]
         public Guid SampleId { get; set; }
 
@@ -22,6 +49,20 @@ namespace CyprusAgriculture.API.Models
         public Guid QuestionnaireId { get; set; }
 
         public Guid? ParticipantId { get; set; }
+
+        // Recipient information
+        [Required]
+        [MaxLength(255)]
+        [EmailAddress]
+        public string RecipientEmail { get; set; } = string.Empty;
+
+        [MaxLength(200)]
+        public string? RecipientName { get; set; }
+
+        // Unique token for tracking
+        [Required]
+        [MaxLength(100)]
+        public string Token { get; set; } = Guid.NewGuid().ToString("N")[..16];
 
         // Email template properties
         [Required]
@@ -50,13 +91,10 @@ namespace CyprusAgriculture.API.Models
 
         public bool SendImmediately { get; set; } = false;
 
-        // Status tracking
-        [Required]
-        [MaxLength(20)]
-        public string Status { get; set; } = "draft"; // draft, scheduled, sent, delivered, failed
+        // Enhanced status tracking
+        public InvitationStatus Status { get; set; } = InvitationStatus.Draft;
 
-        [MaxLength(20)]
-        public string DeliveryStatus { get; set; } = "pending"; // pending, delivered, failed, bounced
+        public DeliveryStatus DeliveryStatus { get; set; } = DeliveryStatus.Pending;
 
         public DateTime? SentAt { get; set; }
 
@@ -74,8 +112,8 @@ namespace CyprusAgriculture.API.Models
 
         public DateTime? CompletedAt { get; set; }
 
-        [MaxLength(20)]
-        public string ParticipationStatus { get; set; } = "not_started"; // not_started, started, completed
+        // Personalized variables (JSON object)
+        public string? PersonalizationData { get; set; }
 
         // Creation info
         [Required]
@@ -97,5 +135,40 @@ namespace CyprusAgriculture.API.Models
 
         [ForeignKey("CreatedBy")]
         public virtual User Creator { get; set; } = null!;
+
+        // Helper methods
+        public static string GenerateToken()
+        {
+            return Guid.NewGuid().ToString("N")[..16]; // 16 character token
+        }
+
+        public void UpdateStatus(InvitationStatus newStatus)
+        {
+            Status = newStatus;
+            UpdatedAt = DateTime.UtcNow;
+
+            switch (newStatus)
+            {
+                case InvitationStatus.Sent:
+                    SentAt = DateTime.UtcNow;
+                    break;
+                case InvitationStatus.Delivered:
+                    DeliveredAt = DateTime.UtcNow;
+                    DeliveryStatus = DeliveryStatus.Delivered;
+                    break;
+                case InvitationStatus.Opened:
+                    OpenedAt = DateTime.UtcNow;
+                    break;
+                case InvitationStatus.Clicked:
+                    ClickedAt = DateTime.UtcNow;
+                    break;
+                case InvitationStatus.Started:
+                    StartedAt = DateTime.UtcNow;
+                    break;
+                case InvitationStatus.Completed:
+                    CompletedAt = DateTime.UtcNow;
+                    break;
+            }
+        }
     }
 }

@@ -99,6 +99,22 @@ export function Login({ onLogin }: LoginProps) {
           )}
 
           <div>
+            <label htmlFor="password" className="sr-only">
+              Διεύθυνση Email
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0e2f41] focus:border-[#0e2f41] focus:z-10 sm:text-sm"
+              placeholder="Password"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
             <button
               type="submit"
               disabled={loading}
