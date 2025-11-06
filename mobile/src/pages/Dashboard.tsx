@@ -9,75 +9,104 @@ import {
   RefreshCw,
   FileText,
   MapPin,
+  Loader2,
 } from "lucide-react";
 import { Header } from "@/components/Header";
+import { useDashboardStats, useRegionalData } from "@/hooks/useDashboard";
 
 const Dashboard = () => {
-  const stats = {
-    total: 45,
-    completed: 28,
-    pending: 17,
-    completionRate: 62,
+  const { data: statsData, isLoading: statsLoading, error: statsError } = useDashboardStats();
+  const { data: regionalData, isLoading: regionalLoading, error: regionalError } = useRegionalData();
+
+  // Transform stats data for display
+  const stats = statsData ? {
+    total: statsData.totalResponses,
+    completed: statsData.completedResponses,
+    pending: statsData.totalResponses - statsData.completedResponses,
+    completionRate: Math.round(statsData.completionRate),
+  } : {
+    total: 0,
+    completed: 0,
+    pending: 0,
+    completionRate: 0,
   };
 
-  const regionData = [
-    { name: "Λευκωσία", total: 15, completed: 10, pending: 5 },
-    { name: "Λεμεσός", total: 12, completed: 8, pending: 4 },
-    { name: "Λάρνακα", total: 10, completed: 6, pending: 4 },
-    { name: "Πάφος", total: 8, completed: 4, pending: 4 },
-  ];
+  // Transform regional data for display
+  const regionDataFormatted = regionalData?.map(region => ({
+    name: region.region,
+    total: region.totalResponses,
+    completed: region.completedResponses,
+    pending: region.totalResponses - region.completedResponses,
+    completionRate: Math.round(region.completionRate),
+  })) || [];
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Header title="Αρχική" showSync />
+      <Header title="Αρχική" showSync showLogo />
 
       <main className="container max-w-4xl mx-auto p-4 pb-20">
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 gap-4 mb-6 animate-slide-up">
-          <Card className="p-5 bg-primary text-primary-foreground shadow-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm opacity-90 mb-1">Σύνολο</p>
-                <p className="text-3xl font-bold">{stats.total}</p>
-              </div>
-              <ClipboardList className="h-8 w-8 opacity-80" />
-            </div>
+        {statsLoading ? (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="p-5 bg-card shadow-card border border-border">
+                <div className="flex items-center justify-center h-20">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : statsError ? (
+          <Card className="p-5 mb-6 border-destructive">
+            <p className="text-sm text-destructive">Σφάλμα φόρτωσης στατιστικών</p>
           </Card>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 mb-6 animate-slide-up">
+            <Card className="p-5 bg-primary text-primary-foreground shadow-card">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90 mb-1">Σύνολο</p>
+                  <p className="text-3xl font-bold">{stats.total}</p>
+                </div>
+                <ClipboardList className="h-8 w-8 opacity-80" />
+              </div>
+            </Card>
 
-          <Card className="p-5 bg-success text-success-foreground shadow-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm opacity-90 mb-1">Ολοκληρωμένα</p>
-                <p className="text-3xl font-bold">{stats.completed}</p>
+            <Card className="p-5 bg-success text-success-foreground shadow-card">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90 mb-1">Ολοκληρωμένα</p>
+                  <p className="text-3xl font-bold">{stats.completed}</p>
+                </div>
+                <CheckCircle2 className="h-8 w-8 opacity-80" />
               </div>
-              <CheckCircle2 className="h-8 w-8 opacity-80" />
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-5 bg-warning text-warning-foreground shadow-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm opacity-90 mb-1">Εκκρεμή</p>
-                <p className="text-3xl font-bold">{stats.pending}</p>
+            <Card className="p-5 bg-warning text-warning-foreground shadow-card">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm opacity-90 mb-1">Εκκρεμή</p>
+                  <p className="text-3xl font-bold">{stats.pending}</p>
+                </div>
+                <Clock className="h-8 w-8 opacity-80" />
               </div>
-              <Clock className="h-8 w-8 opacity-80" />
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-5 bg-card shadow-card border border-border">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Ποσοστό</p>
-                <p className="text-3xl font-bold text-foreground">
-                  {stats.completionRate}%
-                </p>
+            <Card className="p-5 bg-card shadow-card border border-border">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Ποσοστό</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {stats.completionRate}%
+                  </p>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-success/20 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                </div>
               </div>
-              <div className="h-8 w-8 rounded-full bg-success/20 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-success" />
-              </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        )}
 
         {/* Region Breakdown */}
         <div className="mb-6">
@@ -85,8 +114,23 @@ const Dashboard = () => {
             <MapPin className="h-5 w-5 text-primary" />
             Ανά Περιοχή
           </h2>
-          <div className="space-y-3">
-            {regionData.map((region, index) => (
+          {regionalLoading ? (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i} className="p-4 shadow-sm">
+                  <div className="flex items-center justify-center h-20">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : regionalError ? (
+            <Card className="p-4 border-destructive">
+              <p className="text-sm text-destructive">Σφάλμα φόρτωσης περιφερειακών δεδομένων</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {regionDataFormatted.map((region, index) => (
               <Card
                 key={region.name}
                 className="p-4 shadow-sm hover:shadow-card transition-shadow animate-fade-in"
@@ -116,7 +160,8 @@ const Dashboard = () => {
                 </div>
               </Card>
             ))}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}

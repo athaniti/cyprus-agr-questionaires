@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Globe } from "lucide-react";
-import ministryLogo from "@/assets/ministry-logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,10 +23,19 @@ const Login = () => {
     setLanguage(language === "el" ? "en" : "el");
   };
 
+  // Dynamic logo loading for iOS compatibility
+  const getLogoSrc = () => {
+    try {
+      return new URL("../assets/cyprus-ministry-logo.png", import.meta.url).href;
+    } catch {
+      return "/src/assets/cyprus-ministry-logo.png";
+    }
+  };
+
   const translations = {
     el: {
       title: "Υπουργείο Γεωργίας Κύπρου",
-      subtitle: "Σύστημα Ερωτηματολογίων",
+      subtitle: "δίκτυο Δεδομένων Γεωργικών Εκμεταλλεύσεων",
       email: "Email",
       password: "Κωδικός",
       rememberMe: "Να με θυμάσαι",
@@ -36,7 +44,7 @@ const Login = () => {
     },
     en: {
       title: "Cyprus Ministry of Agriculture",
-      subtitle: "Questionnaire System",
+      subtitle: "Agricultural Holdings Data Network",
       email: "Email",
       password: "Password",
       rememberMe: "Remember me",
@@ -54,7 +62,7 @@ const Login = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <img
-              src={ministryLogo}
+              src={getLogoSrc()}
               alt="Ministry Logo"
               className="h-16 mx-auto mb-4 object-contain"
             />

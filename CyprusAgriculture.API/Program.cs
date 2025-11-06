@@ -27,7 +27,16 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5174") // React dev servers
+        policy.WithOrigins(
+                "http://localhost:5173", 
+                "http://localhost:3000", 
+                "http://localhost:5174",
+                "http://localhost:8080",      // Mobile app Vite server
+                "http://192.168.30.19:5173",  // For mobile development
+                "http://192.168.30.19:8080",  // Mobile app network access
+                "capacitor://localhost",      // Capacitor iOS
+                "ionic://localhost"           // Ionic iOS
+              )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

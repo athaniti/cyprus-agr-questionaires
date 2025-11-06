@@ -10,94 +10,92 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, ChevronRight, Filter } from "lucide-react";
+import { FileText, ChevronRight, Filter, Loader2, AlertCircle } from "lucide-react";
 import { Header } from "@/components/Header";
+import { useQuestionnaires } from "@/hooks/useQuestionnaires";
 
-type QuestionnaireStatus = "pending" | "in_progress" | "completed";
-
-interface Questionnaire {
-  id: string;
-  title: string;
-  farmName: string;
-  region: string;
-  assignedDate: string;
-  status: QuestionnaireStatus;
-}
+type QuestionnaireStatus = "draft" | "active" | "completed" | "archived";
 
 const QuestionnaireList = () => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterRegion, setFilterRegion] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  
+  const { data: questionnairesData, isLoading, error } = useQuestionnaires({
+    status: filterStatus !== "all" ? filterStatus : undefined,
+    category: filterCategory !== "all" ? filterCategory : undefined,
+    pageSize: 50,
+  });
 
-  const questionnaires: Questionnaire[] = [
-    {
-      id: "Q001",
-      title: "Γεωργική Παραγωγή 2025",
-      farmName: "Αγρόκτημα Παπαδόπουλου",
-      region: "Λευκωσία",
-      assignedDate: "2025-01-05",
-      status: "pending",
-    },
-    {
-      id: "Q002",
-      title: "Κτηνοτροφία & Ζωική Παραγωγή",
-      farmName: "Κτήμα Γεωργίου",
-      region: "Λεμεσός",
-      assignedDate: "2025-01-04",
-      status: "in_progress",
-    },
-    {
-      id: "Q003",
-      title: "Αρδευτικά Συστήματα",
-      farmName: "Αγροτική Μονάδα Χριστοδούλου",
-      region: "Λάρνακα",
-      assignedDate: "2025-01-03",
-      status: "completed",
-    },
-    {
-      id: "Q004",
-      title: "Οργανική Καλλιέργεια",
-      farmName: "Βιολογική Φάρμα Νικολάου",
-      region: "Πάφος",
-      assignedDate: "2025-01-02",
-      status: "pending",
-    },
-    {
-      id: "Q005",
-      title: "Χρήση Λιπασμάτων",
-      farmName: "Αγρόκτημα Ανδρέου",
-      region: "Λευκωσία",
-      assignedDate: "2025-01-01",
-      status: "completed",
-    },
-  ];
+  const questionnaires = questionnairesData?.data || [];
 
-  const getStatusColor = (status: QuestionnaireStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
+      case "archived":
         return "bg-success/10 text-success border-success/20";
-      case "in_progress":
+      case "active":
         return "bg-primary/10 text-primary border-primary/20";
-      case "pending":
+      case "draft":
         return "bg-warning/10 text-warning border-warning/20";
+      default:
+        return "bg-muted/10 text-muted-foreground border-muted/20";
     }
   };
 
-  const getStatusLabel = (status: QuestionnaireStatus) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
       case "completed":
         return "Ολοκληρωμένο";
-      case "in_progress":
-        return "Σε Εξέλιξη";
-      case "pending":
-        return "Εκκρεμές";
+      case "active":
+        return "Ενεργό";
+      case "draft":
+        return "Πρόχειρο";
+      case "archived":
+        return "Αρχειοθετημένο";
+      default:
+        return "Άγνωστο";
     }
   };
 
-  const filteredQuestionnaires = questionnaires.filter((q) => {
-    if (filterStatus !== "all" && q.status !== filterStatus) return false;
-    if (filterRegion !== "all" && q.region !== filterRegion) return false;
-    return true;
-  });
+  // Categories for filtering
+  const categories = Array.from(new Set(questionnaires.map(q => q.category).filter(Boolean)));
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <Header title="Ερωτηματολόγια" showBack />
+        <main className="container max-w-4xl mx-auto p-4 pb-20">
+          <div className="flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Φόρτωση ερωτηματολογίων...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <Header title="Ερωτηματολόγια" showBack />
+        <main className="container max-w-4xl mx-auto p-4 pb-20">
+          <Card className="p-6 border-destructive">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <div>
+                <h3 className="font-semibold text-destructive">Σφάλμα φόρτωσης</h3>
+                <p className="text-sm text-muted-foreground">
+                  Δεν ήταν δυνατή η φόρτωση των ερωτηματολογίων. Δοκιμάστε ξανά.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -121,26 +119,28 @@ const QuestionnaireList = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Όλες</SelectItem>
-                  <SelectItem value="pending">Εκκρεμές</SelectItem>
-                  <SelectItem value="in_progress">Σε Εξέλιξη</SelectItem>
+                  <SelectItem value="draft">Πρόχειρο</SelectItem>
+                  <SelectItem value="active">Ενεργό</SelectItem>
                   <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
+                  <SelectItem value="archived">Αρχειοθετημένο</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
-                Περιοχή
+                Κατηγορία
               </label>
-              <Select value={filterRegion} onValueChange={setFilterRegion}>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Όλες</SelectItem>
-                  <SelectItem value="Λευκωσία">Λευκωσία</SelectItem>
-                  <SelectItem value="Λεμεσός">Λεμεσός</SelectItem>
-                  <SelectItem value="Λάρνακα">Λάρνακα</SelectItem>
-                  <SelectItem value="Πάφος">Πάφος</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -150,49 +150,69 @@ const QuestionnaireList = () => {
         {/* Results Count */}
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
-            {filteredQuestionnaires.length} ερωτηματολόγια
+            {questionnaires.length} ερωτηματολόγια
+            {questionnairesData?.totalCount && questionnairesData.totalCount > questionnaires.length && (
+              <span> (από σύνολο {questionnairesData.totalCount})</span>
+            )}
           </p>
         </div>
 
         {/* Questionnaires List */}
         <div className="space-y-3">
-          {filteredQuestionnaires.map((q, index) => (
-            <Link key={q.id} to={`/questionnaire/${q.id}`}>
-              <Card
-                className="p-4 hover:shadow-card transition-shadow cursor-pointer animate-fade-in"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {q.id}
+          {questionnaires.length === 0 ? (
+            <Card className="p-6 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-semibold text-foreground mb-1">
+                Δεν βρέθηκαν ερωτηματολόγια
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Δοκιμάστε να αλλάξετε τα φίλτρα αναζήτησης.
+              </p>
+            </Card>
+          ) : (
+            questionnaires.map((q, index) => (
+              <Link key={q.id} to={`/questionnaire/${q.id}`}>
+                <Card
+                  className="p-4 hover:shadow-card transition-shadow cursor-pointer animate-fade-in"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {q.id.substring(0, 8)}...
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-foreground mb-1">
+                        {q.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {q.description || "Χωρίς περιγραφή"}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="text-xs">
+                        {q.category}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(q.createdAt).toLocaleDateString("el-GR")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {q.currentResponses}/{q.targetResponses}
                       </span>
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">
-                      {q.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{q.farmName}</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-xs">
-                      {q.region}
+                    <Badge className={getStatusColor(q.status)}>
+                      {getStatusLabel(q.status)}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(q.assignedDate).toLocaleDateString("el-GR")}
-                    </span>
                   </div>
-                  <Badge className={getStatusColor(q.status)}>
-                    {getStatusLabel(q.status)}
-                  </Badge>
-                </div>
-              </Card>
-            </Link>
-          ))}
+                </Card>
+              </Link>
+            ))
+          )}
         </div>
       </main>
     </div>
