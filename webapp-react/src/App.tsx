@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
-import { FormPreview } from './components/FormPreview';
 import { UserManagement } from './components/UserManagement';
 import { QuestionnaireAssignment } from './components/QuestionnaireAssignment';
 import { SampleManagement } from './components/SampleManagement';
@@ -17,7 +16,7 @@ import QuotaManagement from './components/QuotaManagement';
 import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
 import QuotaAllocationManager from './components/QuotaAllocationManager';
 import TestFormResponses from './pages/TestFormResponses';
-import { FormBuilder } from "@formio/react";
+import { FormBuilder, Form } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
 import '@formio/js/dist/formio.full.min.css';
 
@@ -151,7 +150,6 @@ if (typeof document !== 'undefined') {
       console.warn('FormIO early configuration warning:', error);
     }
   };
-
   // Run configuration immediately and after DOM loads
   configureFormIO();
   document.addEventListener('DOMContentLoaded', configureFormIO);
@@ -170,6 +168,7 @@ if (typeof document !== 'undefined') {
     originalConsoleWarn.apply(console, args);
   };
 }
+
 function AppContent() {
   const { user, isAuthenticated, logout } = useAuth();
   
@@ -177,89 +176,20 @@ function AppContent() {
   if (!isAuthenticated) {
     return <Login />;
   }
-
-  // Simple FormIO modal fix
-  useEffect(() => {
-    // Minimal fix for FormIO modals - only fix what's absolutely necessary
-    const fixFormIOModals = () => {
-      // Only target specific FormIO modals that are showing
-      const modals = document.querySelectorAll('.formio-dialog.show, .modal.show[class*="formio"]');
-      
-      modals.forEach(modal => {
-        if (modal instanceof HTMLElement) {
-          // Ensure modal is visible and interactive (minimal intervention)
-          modal.style.zIndex = '10000';
-          modal.style.pointerEvents = 'auto';
-          
-          // Fix only the save and close buttons
-          const buttons = modal.querySelectorAll('.btn, .close, button');
-          buttons.forEach(btn => {
-            if (btn instanceof HTMLElement) {
-              btn.style.pointerEvents = 'auto';
-              btn.style.zIndex = 'auto';
-            }
-          });
-        }
-      });
-    };
-
-    // Run fix when DOM changes (but not aggressively)
-    const observer = new MutationObserver(() => {
-      setTimeout(fixFormIOModals, 100);
-    });
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class']
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Additional FormIO modal fix - handle click events properly
-  useEffect(() => {
-    const handleModalClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      
-      // Handle close button clicks
-      if (target.matches('.close, .btn-close, [data-dismiss="modal"], [data-bs-dismiss="modal"]')) {
-        e.stopPropagation();
-        const modal = target.closest('.modal, .formio-dialog');
-        if (modal && modal instanceof HTMLElement) {
-          modal.style.display = 'none';
-          // Remove modal backdrop
-          const backdrop = document.querySelector('.modal-backdrop');
-          if (backdrop) {
-            backdrop.remove();
-          }
-        }
-      }
-      
-      // Handle save button clicks in FormIO modals
-      if (target.matches('.btn-primary, [type="submit"]') && target.closest('.formio-dialog, .modal[class*="formio"]')) {
-        // Let FormIO handle the save, but ensure the event propagates
-        e.stopPropagation();
-      }
-    };
-
-    document.addEventListener('click', handleModalClick, true);
-    return () => document.removeEventListener('click', handleModalClick, true);
-  }, []);
-
-  const [currentView, setCurrentView] = useState('dashboard');
+ 
+  const [currentView, setCurrentView] = useState('questionnaires');
   const [language, setLanguage] = useState<'el' | 'en'>('el');
   
   // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any|null>(null);
+
+  const [showCreateOrUpdateModal, setShowCreateOrUpdateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any>(null);
-  const [formBuilderMode, setFormBuilderMode] = useState<'create' | 'edit'>('create');
-  const [newQuestionnaireName, setNewQuestionnaireName] = useState('');
-  const [currentFormSchema, setCurrentFormSchema] = useState<any>({ components: [] });
+  
+  const savedFormSchema = useRef<any>();
+
   const [isSaving, setIsSaving] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [assignmentQuestionnaire, setAssignmentQuestionnaire] = useState<any>(null);
@@ -322,79 +252,51 @@ function AppContent() {
 
   // Συνάρτηση για αποθήκευση ερωτηματολογίου
   const saveQuestionnaire = async () => {
-    if (!newQuestionnaireName.trim()) {
+    if (!selectedQuestionnaire) return;
+    if (!selectedQuestionnaire.name || !selectedQuestionnaire.name.trim()) {
       alert(language === 'el' ? 'Παρακαλώ εισάγετε όνομα ερωτηματολογίου' : 'Please enter questionnaire name');
       return;
     }
 
-    if (!currentFormSchema.components || currentFormSchema.components.length === 0) {
-      const confirmEmpty = window.confirm(
-        language === 'el' 
-          ? 'Το ερωτηματολόγιο είναι κενό. Θέλετε να το αποθηκεύσετε έτσι;'
-          : 'The questionnaire is empty. Do you want to save it anyway?'
-      );
-      if (!confirmEmpty) return;
+    if (!savedFormSchema || !savedFormSchema.current || savedFormSchema.current.components.length === 0) {
+      alert(language === 'el' ? 'Το ερωτηματολόγιο είναι κενό.' : 'The questionnaire is empty.');
+      return;
     }
 
+    selectedQuestionnaire.serializedSchema = JSON.stringify(savedFormSchema.current);
     setIsSaving(true);
 
     try {
-      const questionnaireData = {
-        name: newQuestionnaireName,
-        description: `Questionnaire created ${formBuilderMode === 'create' ? 'on' : 'updated on'} ${new Date().toLocaleDateString()}`,
-        category: 'General', // Default category
-        schema: JSON.stringify(currentFormSchema),
-        targetResponses: 100,
-        createdBy: 'system-user' // In real app, get from JWT token
-      };
+      if (!selectedQuestionnaire.id) {
+        const response = await QuestionnaireService.createQuestionnaire(selectedQuestionnaire);
 
-      if (formBuilderMode === 'create') {
-        console.log('Creating questionnaire:', questionnaireData);
-        const response = await QuestionnaireService.createQuestionnaire(questionnaireData);
-        
-        // Προσθήκη στο local state
-        const newQuestionnaire = {
-          id: response.id,
-          name: response.name,
-          status: 'draft',
-          responses: 0,
-          currentResponses: 0,
-          targetResponses: 100,
-          createdAt: response.createdAt,
-          schema: currentFormSchema
-        };
-        
+        const newQuestionnaire = { ...response, schema:JSON.parse(response.serializedScehma)};
         setQuestionnaires(prev => [...prev, newQuestionnaire]);
         
         alert(
           language === 'el' 
-            ? `Ερωτηματολόγιο "${newQuestionnaireName}" δημιουργήθηκε επιτυχώς!`
-            : `Questionnaire "${newQuestionnaireName}" created successfully!`
+            ? `Ερωτηματολόγιο "${newQuestionnaire.name}" δημιουργήθηκε επιτυχώς!`
+            : `Questionnaire "${newQuestionnaire.name}" created successfully!`
         );
       } else {
-        // Edit mode
-        console.log('Updating questionnaire:', selectedQuestionnaire.id, questionnaireData);
-        await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id, questionnaireData);
-        
-        // Ενημέρωση local state
+        const response = await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id, selectedQuestionnaire);
+        const updatedQuestionnaire = { ...response, schema:JSON.parse(response.serializedScehma)};
         setQuestionnaires(prev => prev.map(q => 
-          q.id === selectedQuestionnaire.id 
-            ? { ...q, name: newQuestionnaireName, schema: currentFormSchema, updatedAt: new Date().toISOString() }
+          q.id === updatedQuestionnaire.id 
+            ? updatedQuestionnaire
             : q
         ));
         
         alert(
           language === 'el' 
-            ? `Ερωτηματολόγιο "${newQuestionnaireName}" ενημερώθηκε επιτυχώς!`
-            : `Questionnaire "${newQuestionnaireName}" updated successfully!`
+            ? `Ερωτηματολόγιο "${selectedQuestionnaire.name}" ενημερώθηκε επιτυχώς!`
+            : `Questionnaire "${selectedQuestionnaire.name}" updated successfully!`
         );
       }
 
-      // Κλείσιμο modal και reset
       setShowFormBuilder(false);
-      setNewQuestionnaireName('');
       setSelectedQuestionnaire(null);
-      setCurrentFormSchema({ components: [] });
+      savedFormSchema.current = undefined;
 
     } catch (error) {
       console.error('Error saving questionnaire:', error);
@@ -408,23 +310,6 @@ function AppContent() {
     }
   };
 
-  // Συνάρτηση για ανάθεση ερωτηματολογίου
-  const handleEditForm = (questionnaire: any) => {
-    console.log('Opening form builder for questionnaire:', questionnaire.id);
-    // Open form builder specifically for this questionnaire
-    setSelectedQuestionnaire(questionnaire);
-    setFormBuilderMode('edit');
-    setNewQuestionnaireName(questionnaire.name);
-    try {
-      const schema = questionnaire.schema || { components: [] };
-      setCurrentFormSchema(schema);
-      console.log('Loading questionnaire schema for form edit:', schema);
-    } catch (error) {
-      console.error('Error loading questionnaire schema:', error);
-      setCurrentFormSchema({ components: [] });
-    }
-    setShowFormBuilder(true);
-  };
 
   const handleSelectTheme = (questionnaire: any) => {
     console.log('Opening theme selector for questionnaire:', questionnaire.id);
@@ -456,11 +341,6 @@ function AppContent() {
       setShowThemeSelector(false);
       setThemeSelectorQuestionnaire(null);
     }
-  };
-
-  const handleAssignQuestionnaire = (questionnaire: any) => {
-    setAssignmentQuestionnaire(questionnaire);
-    setShowAssignmentModal(true);
   };
 
   const handleQuestionnaireAssignment = async (userIds: string[], dueDate: string) => {
@@ -545,112 +425,26 @@ function AppContent() {
     const loadQuestionnaires = async () => {
       try {
         console.log('Loading questionnaires from Cyprus API...');
-        const response = await fetch('http://localhost:5050/api/questionnaires');
+        const response = await QuestionnaireService.getQuestionnaires();
+      // Map the API response to match the App component structure
+        const mappedQuestionnaires = response.data.map((q: any) => ({
+          id: q.id,
+          name: q.name,
+          description: q.description,
+          category: q.category,
+          status: q.status,
+          currentResponses: q.currentResponses,
+          targetResponses: q.targetResponses,
+          completionRate: q.completionRate,
+          createdAt: q.createdAt,
+          samples: q.samples || [],
+          schema: q.serializedSchema ? JSON.parse(q.serializedSchema) : {display: "form", components: [] },
+          samplesCount: q.samplesCount
+        }));
         
-        if (response.ok) {
-          const result = await response.json();
-          console.log('API Response:', result);
-          
-          // Map the API response to match the App component structure
-          const mappedQuestionnaires = result.data.map((q: any) => ({
-            id: q.id,
-            name: q.name,
-            description: q.description,
-            category: q.category,
-            status: q.status,
-            currentResponses: q.currentResponses,
-            targetResponses: q.targetResponses,
-            completionRate: q.completionRate,
-            createdAt: q.createdAt,
-            samples: q.samples || [],
-            samplesCount: q.samplesCount
-          }));
-          
-          console.log('Mapped questionnaires:', mappedQuestionnaires);
-          setQuestionnaires(mappedQuestionnaires);
-        } else {
-          console.warn('API not available, using fallback Cyprus data');
-          // Fallback to Cyprus mock data
-          setQuestionnaires([
-            {
-              id: 'aaaaaaaa-1111-1111-1111-111111111111',
-              name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025',
-              description: 'Ετήσια έρευνα για την κατάσταση της ελαιοπαραγωγής στην Κύπρο',
-              category: 'Φυτική Παραγωγή',
-              status: 'active',
-              currentResponses: 0,
-              targetResponses: 100,
-              completionRate: 0,
-              createdAt: '2025-11-03T21:00:00Z',
-              samplesCount: 1
-            },
-            {
-              id: 'bbbbbbbb-2222-2222-2222-222222222222',
-              name: 'Έρευνα Κτηνοτροφικών Μονάδων',
-              description: 'Έρευνα για τη δομή και τα χαρακτηριστικά των κτηνοτροφικών εκμεταλλεύσεων στην Κύπρο',
-              category: 'Κτηνοτροφία',
-              status: 'active',
-              currentResponses: 0,
-              targetResponses: 50,
-              completionRate: 0,
-              createdAt: '2025-11-03T21:00:00Z',
-              samplesCount: 1
-            },
-            {
-              id: 'cccccccc-3333-3333-3333-333333333333',
-              name: 'Έρευνα Αρδευτικών Συστημάτων',
-              description: 'Μελέτη των μεθόδων άρδευσης και της χρήσης νερού στις αγροτικές εκμεταλλεύσεις',
-              category: 'Άρδευση',
-              status: 'draft',
-              currentResponses: 0,
-              targetResponses: 80,
-              completionRate: 0,
-              createdAt: '2025-11-03T21:00:00Z',
-              samplesCount: 0
-            },
-            {
-              id: 'dddddddd-4444-4444-4444-444444444444',
-              name: 'Έρευνα Βιολογικής Γεωργίας',
-              description: 'Πρόχειρη έρευνα για τις πρακτικές βιολογικής γεωργίας στην Κύπρο',
-              category: 'Βιολογική Γεωργία',
-              status: 'draft',
-              currentResponses: 0,
-              targetResponses: 60,
-              completionRate: 0,
-              createdAt: '2025-11-05T10:00:00Z',
-              samplesCount: 0
-            }
-          ]);
-        }
+        setQuestionnaires(mappedQuestionnaires);
       } catch (error) {
-        console.error('Error loading questionnaires:', error);
-        // Fallback to Cyprus mock data
-        setQuestionnaires([
-          {
-            id: 'aaaaaaaa-1111-1111-1111-111111111111',
-            name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025',
-            description: 'Ετήσια έρευνα για την κατάσταση της ελαιοπαραγωγής στην Κύπρο',
-            category: 'Φυτική Παραγωγή',
-            status: 'active',
-            currentResponses: 0,
-            targetResponses: 100,
-            completionRate: 0,
-            createdAt: '2025-11-03T21:00:00Z',
-            samplesCount: 1
-          },
-          {
-            id: 'dddddddd-4444-4444-4444-444444444444',
-            name: 'Έρευνα Βιολογικής Γεωργίας',
-            description: 'Πρόχειρη έρευνα για τις πρακτικές βιολογικής γεωργίας στην Κύπρο',
-            category: 'Βιολογική Γεωργία',
-            status: 'draft',
-            currentResponses: 0,
-            targetResponses: 60,
-            completionRate: 0,
-            createdAt: '2025-11-05T10:00:00Z',
-            samplesCount: 0
-          }
-        ]);
+        
       }
     };
 
@@ -721,7 +515,10 @@ function AppContent() {
             <button 
               className="px-4 py-2 text-white rounded-xl shadow-md hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#004B87' }}
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                setSelectedQuestionnaire({schema:{display: "form", components: [] }});
+                setShowCreateOrUpdateModal(true);
+              }}
             >
               + {language === 'el' ? 'Δημιουργία Νέου' : 'Create New'}
             </button>
@@ -769,30 +566,10 @@ function AppContent() {
                         <button
                           onClick={() => {
                             setSelectedQuestionnaire(questionnaire);
-                            setFormBuilderMode('edit');
-                            setNewQuestionnaireName(questionnaire.name);
-                            // Φόρτωση schema από το questionnaire
-                            try {
-                              const schema = questionnaire.schema || { components: [] };
-                              setCurrentFormSchema(schema);
-                              console.log('Loading questionnaire schema for edit:', schema);
-                            } catch (error) {
-                              console.error('Error loading questionnaire schema:', error);
-                              setCurrentFormSchema({ components: [] });
-                            }
-                            setShowFormBuilder(true);
+                            setShowCreateOrUpdateModal(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title={language === 'el' ? 'Επεξεργασία' : 'Edit'}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleEditForm(questionnaire)}
                           className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title={language === 'el' ? 'Επεξεργασία Φόρμας' : 'Edit Form'}
+                          title={language === 'el' ? 'Επεξεργασία' : 'Edit'}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -820,6 +597,16 @@ function AppContent() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
+                    </button>
+                    <button onClick={()=>{
+                      QuestionnaireService.deleteQuestionnaire(questionnaire.id).then(()=>{
+                        const newQuestionnaires = [...questionnaires];
+                        newQuestionnaires.splice(questionnaires.indexOf(questionnaire), 1);
+                        setQuestionnaires(newQuestionnaires);
+                      });
+                    }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        ✕
                     </button>
                   </div>
                 </div>
@@ -927,15 +714,17 @@ function AppContent() {
         {/* Content */}
         <main className="flex-1 overflow-auto">
           {renderView()}
+
+          
         </main>
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
+      {/* Create/Edit Modal */}
+      {showCreateOrUpdateModal && selectedQuestionnaire && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-gray-900 mb-6">
-              {language === 'el' ? 'Δημιουργία Νέου Ερωτηματολογίου' : 'Create New Questionnaire'}
+              {language === 'el' ? (!selectedQuestionnaire.id ? 'Δημιουργία Νέου Ερωτηματολογίου' : 'Επεξεργασία ερωτηματολογίου') : (!selectedQuestionnaire.id ? 'Create New Questionnaire' : 'Update questionnaire')}
             </h3>
             
             <div className="space-y-4">
@@ -945,19 +734,33 @@ function AppContent() {
                 </label>
                 <input
                   type="text"
-                  value={newQuestionnaireName}
-                  onChange={(e) => setNewQuestionnaireName(e.target.value)}
+                  value={selectedQuestionnaire.name}
+                  onChange={(e) => setSelectedQuestionnaire({...selectedQuestionnaire, name:e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder={language === 'el' ? 'Εισάγετε όνομα...' : 'Enter name...'}
                 />
               </div>
             </div>
 
+            <div className="space-y-4 ">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {language === 'el' ? 'Περιγραφή Ερωτηματολογίου' : 'Questionnaire Description'}
+                </label>
+                <textarea
+                  value={selectedQuestionnaire.description}
+                  onChange={(e) => setSelectedQuestionnaire({...selectedQuestionnaire, description:e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={language === 'el' ? 'Εισάγετε όνομα...' : 'Enter name...'}
+                ></textarea>
+              </div>
+            </div>
+
             <div className="flex gap-3 mt-8">
               <button
                 onClick={() => {
-                  setShowCreateModal(false);
-                  setNewQuestionnaireName('');
+                  setShowCreateOrUpdateModal(false);
+                  setSelectedQuestionnaire(null);
                 }}
                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
               >
@@ -965,17 +768,16 @@ function AppContent() {
               </button>
               <button
                 onClick={() => {
-                  if (newQuestionnaireName.trim()) {
-                    setShowCreateModal(false);
-                    setFormBuilderMode('create');
-                    setCurrentFormSchema({ components: [] }); // Καθαρό schema για νέο
+                  if (selectedQuestionnaire.name && selectedQuestionnaire.name.trim()) {
+                    savedFormSchema.current = selectedQuestionnaire.schema;
+                    setShowCreateOrUpdateModal(false);
                     setShowFormBuilder(true);
                   }
                 }}
-                disabled={!newQuestionnaireName.trim()}
+                disabled={!selectedQuestionnaire.name || !selectedQuestionnaire.name.trim()}
                 className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {language === 'el' ? 'Δημιουργία' : 'Create'}
+                {language === 'el' ? 'Φόρμα ερωτηματολογίου' : 'Questionnaire form'}
               </button>
             </div>
           </div>
@@ -1153,9 +955,7 @@ function AppContent() {
                 <button
                   onClick={() => {
                     setShowViewModal(false);
-                    setFormBuilderMode('edit');
-                    setNewQuestionnaireName(selectedQuestionnaire.name);
-                    setShowFormBuilder(true);
+                    setShowCreateOrUpdateModal(true);
                   }}
                   className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                 >
@@ -1179,24 +979,17 @@ function AppContent() {
       )}
 
       {/* Form Builder Modal */}
-      {showFormBuilder && (
+      {showFormBuilder && selectedQuestionnaire && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center" style={{ zIndex: 9000 }}>
           <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-4 flex flex-col" style={{ zIndex: 9001 }}>
             <div className="px-8 py-6 border-b border-gray-200 flex-shrink-0" style={{ backgroundColor: '#004B87' }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white">
-                  🛠️ {formBuilderMode === 'create' 
-                    ? (language === 'el' ? 'Δημιουργία Ερωτηματολογίου' : 'Create Questionnaire')
-                    : (language === 'el' ? 'Επεξεργασία Ερωτηματολογίου' : 'Edit Questionnaire')
-                  }
-                  {selectedQuestionnaire?.name && (
-                    <span className="ml-2 text-blue-200">- {selectedQuestionnaire.name}</span>
-                  )}
+                  🛠️ {language === 'el' ? 'Φόρμα ερωτηματολογίου' : 'Questionnaire Form'}
                 </h3>
                 <button
                   onClick={() => {
                     setShowFormBuilder(false);
-                    setNewQuestionnaireName('');
                     setSelectedQuestionnaire(null);
                   }}
                   className="text-white hover:text-blue-200 text-2xl"
@@ -1215,16 +1008,9 @@ function AppContent() {
                      zIndex: 1
                    }}>
                 <FormBuilder 
-                  initialForm={currentFormSchema.components ? currentFormSchema : { 
-                    components: [],
-                    display: 'form'
-                  }}
+                  initialForm={selectedQuestionnaire.schema }
                   onChange={(form: any) => {
-                    console.log('Form schema updated:', form);
-                    setCurrentFormSchema(form);
-                  }}
-                  onBuilderReady={(builder: any) => {
-                    console.log('FormBuilder ready:', builder);
+                    savedFormSchema.current = form;
                   }}
                 />
               </div>
@@ -1235,8 +1021,8 @@ function AppContent() {
               <button
                 onClick={() => {
                   setShowFormBuilder(false);
-                  setNewQuestionnaireName('');
                   setSelectedQuestionnaire(null);
+                  savedFormSchema.current = undefined;
                 }}
                 className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition-colors"
               >
@@ -1265,11 +1051,31 @@ function AppContent() {
 
       {/* Form Preview Modal */}
       {showPreview && selectedQuestionnaire && (
-        <FormPreview
-          questionnaire={selectedQuestionnaire}
-          onClose={() => setShowPreview(false)}
-          language={language}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full h-full max-w-4xl max-h-[95vh] m-4 flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{language === 'el' ? 'Προβολή' : 'Preview'}</h2>
+                <p className="text-gray-600 text-sm mt-1">{selectedQuestionnaire.name}</p>
+              </div>
+              <button
+                onClick={()=> {
+                  setShowPreview(false);
+                  setSelectedQuestionnaire(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                {language === 'el' ? 'Κλείσιμο' : 'Close'}
+              </button>
+            </div>
+    
+            {/* Form Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <Form src="" form={selectedQuestionnaire.schema}/>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Assignment Modal */}

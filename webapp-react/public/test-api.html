@@ -16,7 +16,7 @@
             try {
                 // Test health endpoint
                 console.log('Testing health endpoint...');
-                const healthResponse = await fetch('http://localhost:5096/health');
+                const healthResponse = await fetch('http://localhost:5050/health');
                 console.log('Health response:', healthResponse);
                 
                 if (healthResponse.ok) {
@@ -28,7 +28,7 @@
                 
                 // Test questionnaires endpoint
                 console.log('Testing questionnaires endpoint...');
-                const questionnairesResponse = await fetch('http://localhost:5096/api/questionnaires');
+                const questionnairesResponse = await fetch('http://localhost:5050/api/questionnaires');
                 console.log('Questionnaires response:', questionnairesResponse);
                 
                 if (questionnairesResponse.ok) {

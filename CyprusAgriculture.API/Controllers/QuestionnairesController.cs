@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CyprusAgriculture.API.Data;
 using CyprusAgriculture.API.Models;
+using System.Text.Json.Serialization;
 
 namespace CyprusAgriculture.API.Controllers
 {
@@ -55,6 +56,7 @@ namespace CyprusAgriculture.API.Controllers
                         q.Description,
                         q.Category,
                         q.Status,
+                        SerializedSchema = q.Schema,
                         q.TargetResponses,
                         q.CurrentResponses,
                         CompletionRate = q.TargetResponses > 0 ? (double)q.CurrentResponses / q.TargetResponses * 100 : 0,
@@ -118,7 +120,7 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.Description,
                     questionnaire.Category,
                     questionnaire.Status,
-                    questionnaire.Schema,
+                    SerializedSchema = questionnaire.Schema,
                     questionnaire.TargetResponses,
                     questionnaire.CurrentResponses,
                     CreatedBy = "System User", // Fallback since Creator relation might not be properly set up
@@ -146,8 +148,9 @@ namespace CyprusAgriculture.API.Controllers
 
         // POST: api/questionnaires
         [HttpPost]
-        public async Task<ActionResult<object>> CreateQuestionnaire([FromBody] CreateQuestionnaireRequest request)
+        public async Task<ActionResult<object>> CreateQuestionnaire([FromBody] CreateOrUpdateQuestionnaireRequest request)
         {
+            var userId = _context.Users.First().Id;
             try
             {
                 var questionnaire = new Questionnaire
@@ -155,9 +158,9 @@ namespace CyprusAgriculture.API.Controllers
                     Name = request.Name,
                     Description = request.Description,
                     Category = request.Category,
-                    Schema = request.Schema ?? "{}",
-                    TargetResponses = request.TargetResponses,
-                    CreatedBy = request.CreatedBy, // In real app, get from JWT token
+                    Schema = request.SerializedSchema,
+                    TargetResponses = request.TargetResponses ?? 0,
+                    CreatedBy = userId,
                     Status = "draft"
                 };
 
@@ -169,7 +172,11 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.Id,
                     questionnaire.Name,
                     questionnaire.Status,
-                    questionnaire.CreatedAt
+                    questionnaire.CreatedAt,
+                    questionnaire.Description,
+                    questionnaire.Category,
+                    questionnaire.TargetResponses,
+                    SerializedScehma = questionnaire.Schema
                 });
             }
             catch (Exception ex)
@@ -181,7 +188,7 @@ namespace CyprusAgriculture.API.Controllers
 
         // PUT: api/questionnaires/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateQuestionnaire(Guid id, [FromBody] UpdateQuestionnaireRequest request)
+        public async Task<IActionResult> UpdateQuestionnaire(Guid id, [FromBody] CreateOrUpdateQuestionnaireRequest request)
         {
             try
             {
@@ -191,16 +198,26 @@ namespace CyprusAgriculture.API.Controllers
                     return NotFound();
                 }
 
-                questionnaire.Name = request.Name ?? questionnaire.Name;
-                questionnaire.Description = request.Description ?? questionnaire.Description;
-                questionnaire.Category = request.Category ?? questionnaire.Category;
-                questionnaire.Schema = request.Schema ?? questionnaire.Schema;
-                questionnaire.TargetResponses = request.TargetResponses ?? questionnaire.TargetResponses;
+                questionnaire.Name = request.Name;
+                questionnaire.Description = request.Description ;
+                questionnaire.Category = request.Category;
+                questionnaire.Schema = request.SerializedSchema;
+                questionnaire.TargetResponses = request.TargetResponses ?? 0;
                 questionnaire.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
-                return NoContent();
+                return Ok(new
+                {
+                    questionnaire.Id,
+                    questionnaire.Name,
+                    questionnaire.Status,
+                    questionnaire.CreatedAt,
+                    questionnaire.Description,
+                    questionnaire.Category,
+                    questionnaire.TargetResponses,
+                    SerializedScehma = questionnaire.Schema
+                });
             }
             catch (Exception ex)
             {
@@ -209,73 +226,6 @@ namespace CyprusAgriculture.API.Controllers
             }
         }
 
-        // PUT: api/questionnaires/{id}/publish
-        [HttpPut("{id}/publish")]
-        public async Task<IActionResult> PublishQuestionnaire(Guid id)
-        {
-            try
-            {
-                var questionnaire = await _context.Questionnaires.FindAsync(id);
-                if (questionnaire == null)
-                {
-                    return NotFound();
-                }
-
-                questionnaire.Status = "active";
-                questionnaire.PublishedAt = DateTime.UtcNow;
-                questionnaire.UpdatedAt = DateTime.UtcNow;
-
-                await _context.SaveChangesAsync();
-
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error publishing questionnaire {Id}", id);
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        // POST: api/questionnaires/{id}/duplicate
-        [HttpPost("{id}/duplicate")]
-        public async Task<ActionResult<object>> DuplicateQuestionnaire(Guid id)
-        {
-            try
-            {
-                var originalQuestionnaire = await _context.Questionnaires.FindAsync(id);
-                if (originalQuestionnaire == null)
-                {
-                    return NotFound();
-                }
-
-                var duplicatedQuestionnaire = new Questionnaire
-                {
-                    Name = $"{originalQuestionnaire.Name} (Copy)",
-                    Description = originalQuestionnaire.Description,
-                    Category = originalQuestionnaire.Category,
-                    Schema = originalQuestionnaire.Schema,
-                    TargetResponses = originalQuestionnaire.TargetResponses,
-                    CreatedBy = originalQuestionnaire.CreatedBy,
-                    Status = "draft"
-                };
-
-                _context.Questionnaires.Add(duplicatedQuestionnaire);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetQuestionnaire), new { id = duplicatedQuestionnaire.Id }, new
-                {
-                    duplicatedQuestionnaire.Id,
-                    duplicatedQuestionnaire.Name,
-                    duplicatedQuestionnaire.Status,
-                    duplicatedQuestionnaire.CreatedAt
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error duplicating questionnaire {Id}", id);
-                return StatusCode(500, "Internal server error");
-            }
-        }
 
         // DELETE: api/questionnaires/{id}
         [HttpDelete("{id}")]
@@ -332,162 +282,24 @@ namespace CyprusAgriculture.API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-
-        // GET: api/questionnaires/{id}/schema
-        [HttpGet("{id}/schema")]
-        public async Task<ActionResult<object>> GetQuestionnaireSchema(Guid id)
-        {
-            try
-            {
-                var questionnaire = await _context.Questionnaires
-                    .Where(q => q.Id == id)
-                    .Select(q => new { q.Id, q.Name, q.Schema, q.UpdatedAt })
-                    .FirstOrDefaultAsync();
-
-                if (questionnaire == null)
-                {
-                    return NotFound(new { error = "Questionnaire not found" });
-                }
-
-                return Ok(new
-                {
-                    questionnaire.Id,
-                    questionnaire.Name,
-                    Schema = System.Text.Json.JsonSerializer.Deserialize<object>(questionnaire.Schema),
-                    questionnaire.UpdatedAt
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving schema for questionnaire {Id}", id);
-                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
-            }
-        }
-
-        // PUT: api/questionnaires/{id}/schema
-        [HttpPut("{id}/schema")]
-        public async Task<IActionResult> UpdateQuestionnaireSchema(Guid id, [FromBody] UpdateSchemaRequest request)
-        {
-            try
-            {
-                var questionnaire = await _context.Questionnaires.FindAsync(id);
-                if (questionnaire == null)
-                {
-                    return NotFound(new { error = "Questionnaire not found" });
-                }
-
-                // Validate that the schema is valid JSON
-                try
-                {
-                    System.Text.Json.JsonSerializer.Deserialize<object>(request.Schema);
-                }
-                catch (System.Text.Json.JsonException)
-                {
-                    return BadRequest(new { error = "Invalid JSON schema format" });
-                }
-
-                questionnaire.Schema = request.Schema;
-                questionnaire.UpdatedAt = DateTime.UtcNow;
-
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Schema updated for questionnaire {Id}", id);
-
-                return Ok(new
-                {
-                    message = "Schema updated successfully",
-                    questionnaire.Id,
-                    questionnaire.UpdatedAt
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating schema for questionnaire {Id}", id);
-                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
-            }
-        }
-
-        // POST: api/questionnaires/schema
-        [HttpPost("schema")]
-        public async Task<ActionResult<object>> CreateQuestionnaireWithSchema([FromBody] CreateQuestionnaireWithSchemaRequest request)
-        {
-            try
-            {
-                // Validate that the schema is valid JSON
-                try
-                {
-                    System.Text.Json.JsonSerializer.Deserialize<object>(request.Schema);
-                }
-                catch (System.Text.Json.JsonException)
-                {
-                    return BadRequest(new { error = "Invalid JSON schema format" });
-                }
-
-                var questionnaire = new Questionnaire
-                {
-                    Name = request.Name,
-                    Description = request.Description,
-                    Category = request.Category,
-                    Schema = request.Schema,
-                    TargetResponses = request.TargetResponses,
-                    CreatedBy = request.CreatedBy, // In real app, get from JWT token
-                    Status = "draft"
-                };
-
-                _context.Questionnaires.Add(questionnaire);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Questionnaire created with schema: {Id}", questionnaire.Id);
-
-                return CreatedAtAction(nameof(GetQuestionnaire), new { id = questionnaire.Id }, new
-                {
-                    questionnaire.Id,
-                    questionnaire.Name,
-                    questionnaire.Status,
-                    questionnaire.CreatedAt,
-                    message = "Questionnaire created successfully with FormIO schema"
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating questionnaire with schema");
-                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
-            }
-        }
     }
 
     // DTOs
-    public class CreateQuestionnaireRequest
+    public class CreateOrUpdateQuestionnaireRequest
     {
+        [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public string Category { get; set; } = string.Empty;
-        public string? Schema { get; set; }
-        public int TargetResponses { get; set; }
-        public Guid CreatedBy { get; set; }
-    }
 
-    public class UpdateQuestionnaireRequest
-    {
-        public string? Name { get; set; }
+        [JsonPropertyName("description")]
         public string? Description { get; set; }
-        public string? Category { get; set; }
-        public string? Schema { get; set; }
+
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = string.Empty;
+
+        [JsonPropertyName("serializedSchema")]
+        public string SerializedSchema { get; set; } = string.Empty;
+
+        [JsonPropertyName("targetResponses")]
         public int? TargetResponses { get; set; }
-    }
-
-    public class CreateQuestionnaireWithSchemaRequest
-    {
-        public string Name { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public string Category { get; set; } = string.Empty;
-        public string Schema { get; set; } = "{}";
-        public int TargetResponses { get; set; } = 0;
-        public Guid CreatedBy { get; set; }
-    }
-
-    public class UpdateSchemaRequest
-    {
-        public string Schema { get; set; } = string.Empty;
     }
 }

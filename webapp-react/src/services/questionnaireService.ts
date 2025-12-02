@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5096/api';
+const API_BASE_URL = 'http://localhost:5050/api';
 
 export interface QuestionnaireRequest {
   name: string;
@@ -15,7 +15,7 @@ export interface QuestionnaireResponse {
   description?: string;
   category: string;
   status: string;
-  schema: any;
+  serializedScehma: any;
   targetResponses: number;
   currentResponses: number;
   createdBy: string;
@@ -31,7 +31,7 @@ export class QuestionnaireService {
     status?: string,
     category?: string,
     page: number = 1,
-    pageSize: number = 10
+    pageSize: number = 100
   ): Promise<{ data: QuestionnaireResponse[]; totalCount: number; totalPages: number }> {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
@@ -69,7 +69,6 @@ export class QuestionnaireService {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
-
     return await response.json();
   }
 
@@ -77,7 +76,7 @@ export class QuestionnaireService {
   static async updateQuestionnaire(
     id: string, 
     questionnaire: Partial<QuestionnaireRequest>
-  ): Promise<void> {
+  ): Promise<QuestionnaireResponse> {
     const response = await fetch(`${API_BASE_URL}/questionnaires/${id}`, {
       method: 'PUT',
       headers: {
@@ -89,28 +88,6 @@ export class QuestionnaireService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-  }
-
-  // Publish questionnaire
-  static async publishQuestionnaire(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/publish`, {
-      method: 'PUT',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-  }
-
-  // Duplicate questionnaire
-  static async duplicateQuestionnaire(id: string): Promise<QuestionnaireResponse> {
-    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/duplicate`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     return await response.json();

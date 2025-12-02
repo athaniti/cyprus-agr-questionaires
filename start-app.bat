@@ -11,6 +11,6 @@ echo Starting React App...
 start cmd /k "cd /d C:\Repos\cyprus-agr-questionaires\webapp-react && npm run dev"
 
 echo Both servers are starting...
-echo API: http://localhost:5096
+echo API: http://localhost:5050
 echo React: http://localhost:3000
 pause

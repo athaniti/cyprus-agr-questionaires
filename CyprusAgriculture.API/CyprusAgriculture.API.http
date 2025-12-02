@@ -1,4 +1,4 @@
-@CyprusAgriculture.API_HostAddress = http://localhost:5096
+@CyprusAgriculture.API_HostAddress = http://localhost:5050
 
 GET {{CyprusAgriculture.API_HostAddress}}/weatherforecast/
 Accept: application/json
