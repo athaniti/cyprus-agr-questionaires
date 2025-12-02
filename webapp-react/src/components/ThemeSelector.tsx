@@ -236,7 +236,7 @@ export function ThemeSelector({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto bg-white p-6 rounded-xl shadow-lg !max-w-[1400px]" style={{ width: 'min(1400px, 96vw)' }}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Palette className="h-5 w-5" />
@@ -247,14 +247,14 @@ export function ThemeSelector({
             </p>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+          <div className="flex flex-col gap-4 mt-6">
             {mockThemes.map((theme) => (
               <Card 
                 key={theme.id} 
-                className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                className={`w-full cursor-pointer transition-all duration-200 ${
                   selectedThemeId === theme.id 
                     ? 'ring-2 ring-blue-500 bg-blue-50' 
-                    : 'hover:ring-1 hover:ring-gray-300'
+                    : 'hover:shadow-md hover:ring-1 hover:ring-gray-300 bg-white'
                 }`}
                 onClick={() => handleThemeSelect(theme)}
               >
@@ -361,7 +361,7 @@ export function ThemeSelector({
       {/* Preview Modal */}
       {showPreview && previewTheme && (
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto bg-white p-6 rounded-xl shadow-lg !max-w-[1200px]" style={{ width: 'min(1200px, 92vw)' }}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Eye className="h-5 w-5" />
