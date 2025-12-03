@@ -14,12 +14,22 @@ namespace CyprusAgriculture.API.Models
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string Category { get; set; } = string.Empty; // Agriculture, Livestock, Fisheries, etc.
+        public string LogoPosition { get; set; } = "left";
+        public string? LogoImageBase64 {get;set;}
 
-        public bool IsActive { get; set; } = true;
+        public string? BodyFont {get;set;}
 
+        public int? BodyFontSize {get;set;}
+
+        public string? HeaderFont {get;set;}
+
+        public int? HeaderFontSize {get;set;}
+        public string? PrimaryColor {get;set;}
+        public string? SecondaryColor {get;set;}
+        public string? BackgroundColor {get;set;}
+        public string? TextColor {get;set;}
+
+        public bool IsDefault {get;set;}
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

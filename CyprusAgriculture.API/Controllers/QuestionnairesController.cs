@@ -64,7 +64,7 @@ namespace CyprusAgriculture.API.Controllers
                         q.CreatedAt,
                         q.PublishedAt,
                         q.UpdatedAt,
-                        // Add sample information
+                        q.ThemeId,
                         SamplesCount = _context.Samples.Count(s => s.QuestionnaireId == q.Id),
                         Samples = _context.Samples
                             .Where(s => s.QuestionnaireId == q.Id)
@@ -127,6 +127,7 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.CreatedAt,
                     questionnaire.PublishedAt,
                     questionnaire.UpdatedAt,
+                    questionnaire.ThemeId,
                     ResponseCount = questionnaire.Responses.Count,
                     Quotas = questionnaire.Quotas.Select(q => new
                     {
@@ -160,6 +161,7 @@ namespace CyprusAgriculture.API.Controllers
                     Category = request.Category,
                     Schema = request.SerializedSchema,
                     TargetResponses = request.TargetResponses ?? 0,
+                    ThemeId = request.ThemeId,
                     CreatedBy = userId,
                     Status = "draft"
                 };
@@ -175,6 +177,7 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.CreatedAt,
                     questionnaire.Description,
                     questionnaire.Category,
+                    questionnaire.ThemeId,
                     questionnaire.TargetResponses,
                     SerializedScehma = questionnaire.Schema
                 });
@@ -202,6 +205,7 @@ namespace CyprusAgriculture.API.Controllers
                 questionnaire.Description = request.Description ;
                 questionnaire.Category = request.Category;
                 questionnaire.Schema = request.SerializedSchema;
+                questionnaire.ThemeId = request.ThemeId;
                 questionnaire.TargetResponses = request.TargetResponses ?? 0;
                 questionnaire.UpdatedAt = DateTime.UtcNow;
 
@@ -215,6 +219,7 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.CreatedAt,
                     questionnaire.Description,
                     questionnaire.Category,
+                    questionnaire.ThemeId,
                     questionnaire.TargetResponses,
                     SerializedScehma = questionnaire.Schema
                 });
@@ -338,5 +343,8 @@ namespace CyprusAgriculture.API.Controllers
 
         [JsonPropertyName("targetResponses")]
         public int? TargetResponses { get; set; }
+
+        [JsonPropertyName("themeId")]
+        public Guid ThemeId {get;set;} = Guid.Empty;
     }
 }

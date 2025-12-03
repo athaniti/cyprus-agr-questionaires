@@ -6,6 +6,8 @@ import { FormBuilder, Form } from "@formio/react";
 import '@formio/js/dist/formio.full.min.css';
 
 import { ThemeSelector } from '@/components/ThemeSelector';
+import { Theme } from "./ThemesPage";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // CSS για FormIO controls visibility
 const formioCSS = `
@@ -161,9 +163,10 @@ interface QuestionnairesPageProps {
 }
 
 export default function QuestionnairesPage({language='el' }:QuestionnairesPageProps) {
+    const API_BASE_URL = 'http://localhost:5050/api';
   // Modal states
   const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any|null>(null);
-
+  const [themes, setThemes] = useState<Theme[]|undefined>(undefined);
   const [showCreateOrUpdateModal, setShowCreateOrUpdateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
@@ -403,6 +406,31 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
 
   // Load questionnaires from API
   useEffect(() => {
+      const loadThemes = async () => {
+    
+        try {      
+            const response = await fetch(`${API_BASE_URL}/themes`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('API Response data:', data);
+            
+            // The API returns { responses: [], totalCount: 0, ... }
+            // Extract the responses array
+            const themes = data || [];
+            
+            // Set the responses from API or empty array if none found
+            setThemes(themes);
+        } catch (err) {
+            console.error('Error fetching responses:', err);
+        
+        } finally {
+        }
+    };
+    
     const loadQuestionnaires = async () => {
       try {
         console.log('Loading questionnaires from Cyprus API...');
@@ -420,7 +448,8 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
           createdAt: q.createdAt,
           samples: q.samples || [],
           schema: q.serializedSchema ? JSON.parse(q.serializedSchema) : {display: "form", components: [] },
-          samplesCount: q.samplesCount
+          samplesCount: q.samplesCount,
+          themeId:q.themeId
         }));
         
         setQuestionnaires(mappedQuestionnaires);
@@ -430,6 +459,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
     };
 
     loadQuestionnaires();
+    loadThemes();
   }, []);
 
   return (
@@ -450,7 +480,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                     className="px-4 py-2 text-white rounded-xl shadow-md hover:opacity-90 transition-opacity"
                     style={{ backgroundColor: '#004B87' }}
                     onClick={() => {
-                    setSelectedQuestionnaire({schema:{display: "form", components: [] }});
+                    setSelectedQuestionnaire({themeId:(themes??[]).length ? (themes!.find(t=>t.isDefault === true)?.id ?? themes![0].id):undefined, schema:{display: "form", components: [] }});
                     setShowCreateOrUpdateModal(true);
                     }}
                 >
@@ -649,6 +679,29 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
               </div>
             </div>
 
+            <div className="space-y-4 ">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {language === 'el' ? 'Θέμα' : 'Theme'}
+                </label>
+                <Select 
+                      value={selectedQuestionnaire.themeId} 
+                      onValueChange={(newThemeId:string) => 
+                        setSelectedQuestionnaire({...selectedQuestionnaire, themeId:newThemeId})
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(themes??[]).map((theme) => (
+                          <SelectItem key={theme.id} value={theme.id}>{theme.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+              </div>
+            </div>
+
             <div className="flex gap-3 mt-8">
               <button
                 onClick={() => {
@@ -667,7 +720,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                     setShowFormBuilder(true);
                   }
                 }}
-                disabled={!selectedQuestionnaire.name || !selectedQuestionnaire.name.trim()}
+                disabled={!selectedQuestionnaire.name || !selectedQuestionnaire.name.trim() || !selectedQuestionnaire.themeId}
                 className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {language === 'el' ? 'Φόρμα ερωτηματολογίου' : 'Questionnaire form'}

@@ -58,7 +58,7 @@ export default function ResponsesViewer({
     totalPages: 0
   });
 
-    const fetchResponses = async () => {
+  const fetchResponses = async () => {
     setLoading(true);
     setError(null);
     

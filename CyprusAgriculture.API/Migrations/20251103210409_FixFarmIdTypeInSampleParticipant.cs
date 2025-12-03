@@ -138,10 +138,9 @@ namespace CyprusAgriculture.API.Migrations
                 table: "themes",
                 newName: "description");
 
-            migrationBuilder.RenameColumn(
+            migrationBuilder.DropColumn(
                 name: "Category",
-                table: "themes",
-                newName: "category");
+                table: "themes");
 
             migrationBuilder.RenameColumn(
                 name: "Id",
@@ -153,15 +152,84 @@ namespace CyprusAgriculture.API.Migrations
                 table: "themes",
                 newName: "updated_at");
 
-            migrationBuilder.RenameColumn(
+            migrationBuilder.DropCheckConstraint(
                 name: "IsActive",
-                table: "themes",
-                newName: "is_active");
+                table: "themes");
 
             migrationBuilder.RenameColumn(
                 name: "CreatedAt",
                 table: "themes",
                 newName: "created_at");
+
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "logo_position",
+                type: "character varying(100)",
+                nullable: false, 
+                defaultValue: "left"
+            );
+
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "logo_image_base64",
+                type: "text",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "body_font",
+                type: "character varying(100)",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<int>(
+                table: "themes",
+                name: "body_font_size",
+                type: "integer",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "header_font",
+                type: "character varying(100)",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<int>(
+                table: "themes",
+                name: "header_font_size",
+                type: "integer",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "primary_color",
+                type: "character varying(100)",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "secondary_color",
+                type: "character varying(100)",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "background_color",
+                type: "character varying(100)",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<string>(
+                table: "themes",
+                name: "text_color",
+                type: "character varying(100)",
+                nullable: true
+            );
+            migrationBuilder.AddColumn<bool>(
+                table: "themes",
+                name: "is_default",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false
+            );
 
             migrationBuilder.RenameColumn(
                 name: "Status",
