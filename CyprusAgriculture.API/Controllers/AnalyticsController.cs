@@ -30,7 +30,7 @@ namespace CyprusAgriculture.API.Controllers
                     return NotFound($"Questionnaire {questionnaireId} not found");
                 }
 
-                var summary = await _context.FormResponses
+                var summary = await _context.QuestionnaireResponses
                     .Where(fr => fr.QuestionnaireId == questionnaireId)
                     .GroupBy(fr => 1)
                     .Select(g => new
@@ -89,10 +89,10 @@ namespace CyprusAgriculture.API.Controllers
                     return NotFound($"Questionnaire {questionnaireId} not found");
                 }
 
-                var baseQuery = from fr in _context.FormResponses
-                               join f in _context.Farms on fr.FarmId equals f.Id
-                               where fr.QuestionnaireId == questionnaireId
-                               select new { fr, f };
+                var baseQuery = from qr in _context.QuestionnaireResponses
+                               join f in _context.Farms on qr.FarmId equals f.Id
+                               where qr.QuestionnaireId == questionnaireId
+                               select new { qr, f };
 
                 object successRates;
 
@@ -105,11 +105,11 @@ namespace CyprusAgriculture.API.Controllers
                             {
                                 Province = g.Key,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.fr.Status == "submitted"),
-                                InProgress = g.Count(x => x.fr.Status == "in_progress"),
-                                Draft = g.Count(x => x.fr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.fr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.fr.CompletionPercentage)
+                                Completed = g.Count(x => x.qr.Status == "submitted"),
+                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Draft = g.Count(x => x.qr.Status == "draft"),
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
+                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
                             })
                             .OrderByDescending(x => x.SuccessRate)
                             .ToListAsync();
@@ -123,11 +123,11 @@ namespace CyprusAgriculture.API.Controllers
                                 Province = g.Key.Province,
                                 Community = g.Key.Community,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.fr.Status == "submitted"),
-                                InProgress = g.Count(x => x.fr.Status == "in_progress"),
-                                Draft = g.Count(x => x.fr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.fr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.fr.CompletionPercentage)
+                                Completed = g.Count(x => x.qr.Status == "submitted"),
+                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Draft = g.Count(x => x.qr.Status == "draft"),
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
+                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
                             })
                             .OrderBy(x => x.Province)
                             .ThenByDescending(x => x.SuccessRate)
@@ -141,11 +141,11 @@ namespace CyprusAgriculture.API.Controllers
                             {
                                 EconomicSize = g.Key,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.fr.Status == "submitted"),
-                                InProgress = g.Count(x => x.fr.Status == "in_progress"),
-                                Draft = g.Count(x => x.fr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.fr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.fr.CompletionPercentage)
+                                Completed = g.Count(x => x.qr.Status == "submitted"),
+                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Draft = g.Count(x => x.qr.Status == "draft"),
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
+                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
                             })
                             .OrderByDescending(x => x.SuccessRate)
                             .ToListAsync();
@@ -158,11 +158,11 @@ namespace CyprusAgriculture.API.Controllers
                             {
                                 FarmType = g.Key,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.fr.Status == "submitted"),
-                                InProgress = g.Count(x => x.fr.Status == "in_progress"),
-                                Draft = g.Count(x => x.fr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.fr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.fr.CompletionPercentage)
+                                Completed = g.Count(x => x.qr.Status == "submitted"),
+                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Draft = g.Count(x => x.qr.Status == "draft"),
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
+                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
                             })
                             .OrderByDescending(x => x.SuccessRate)
                             .ToListAsync();
@@ -199,12 +199,12 @@ namespace CyprusAgriculture.API.Controllers
                     return NotFound($"Questionnaire {questionnaireId} not found");
                 }
 
-                var performance = await (from fr in _context.FormResponses
-                                       join u in _context.Users on fr.InterviewerId equals u.Id into userGroup
+                var performance = await (from qr in _context.QuestionnaireResponses
+                                       join u in _context.Users on qr.UserId equals u.Id into userGroup
                                        from interviewer in userGroup.DefaultIfEmpty()
-                                       where fr.QuestionnaireId == questionnaireId && fr.InterviewerId != null
-                                       group new { fr, interviewer } by new { 
-                                           InterviewerId = fr.InterviewerId,
+                                       where qr.QuestionnaireId == questionnaireId && qr.UserId != null
+                                       group new { qr, interviewer } by new { 
+                                           InterviewerId = qr.UserId,
                                            InterviewerName = interviewer != null ? $"{interviewer.FirstName} {interviewer.LastName}" : "Unknown"
                                        } into g
                                        select new
@@ -212,13 +212,13 @@ namespace CyprusAgriculture.API.Controllers
                                            InterviewerId = g.Key.InterviewerId,
                                            InterviewerName = g.Key.InterviewerName,
                                            TotalAssigned = g.Count(),
-                                           Completed = g.Count(x => x.fr.Status == "submitted"),
-                                           InProgress = g.Count(x => x.fr.Status == "in_progress"),
-                                           Draft = g.Count(x => x.fr.Status == "draft"),
-                                           SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.fr.Status == "submitted") / g.Count() * 100 : 0,
-                                           AverageCompletion = (double)g.Average(x => (decimal)x.fr.CompletionPercentage),
-                                           AverageDaysToComplete = g.Where(x => x.fr.Status == "submitted" && x.fr.SubmittedAt != null)
-                                                                    .Select(x => (x.fr.SubmittedAt!.Value - x.fr.CreatedAt).TotalDays)
+                                           Completed = g.Count(x => x.qr.Status == "submitted"),
+                                           InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                           Draft = g.Count(x => x.qr.Status == "draft"),
+                                           SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
+                                           AverageCompletion = (double)g.Average(x => (decimal)x.qr.CompletionPercentage),
+                                           AverageDaysToComplete = g.Where(x => x.qr.Status == "submitted" && x.qr.SubmittedAt != null)
+                                                                    .Select(x => (x.qr.SubmittedAt!.Value - x.qr.CreatedAt).TotalDays)
                                                                     .DefaultIfEmpty(0)
                                                                     .Average()
                                        })
@@ -254,10 +254,10 @@ namespace CyprusAgriculture.API.Controllers
 
                 var startDate = DateTime.UtcNow.AddDays(-days);
 
-                var trends = await _context.FormResponses
-                    .Where(fr => fr.QuestionnaireId == questionnaireId && 
-                                (fr.UpdatedAt ?? fr.CreatedAt) >= startDate)
-                    .GroupBy(fr => fr.CreatedAt.Date)
+                var trends = await _context.QuestionnaireResponses
+                    .Where(qr => qr.QuestionnaireId == questionnaireId && 
+                                (qr.UpdatedAt ?? qr.CreatedAt) >= startDate)
+                    .GroupBy(qr => qr.CreatedAt.Date)
                     .Select(g => new
                     {
                         Date = g.Key,
@@ -294,28 +294,28 @@ namespace CyprusAgriculture.API.Controllers
                 var totalFarms = await _context.Farms.CountAsync();
                 var totalUsers = await _context.Users.CountAsync();
                 
-                var activeResponses = await _context.FormResponses
-                    .GroupBy(fr => fr.Status)
+                var activeResponses = await _context.QuestionnaireResponses
+                    .GroupBy(qr => qr.Status)
                     .Select(g => new { Status = g.Key, Count = g.Count() })
                     .ToListAsync();
 
-                var recentActivity = await _context.FormResponses
-                    .Where(fr => (fr.UpdatedAt ?? fr.CreatedAt) >= DateTime.UtcNow.AddDays(-7))
-                    .Include(fr => fr.Questionnaire)
-                    .Include(fr => fr.Farm)
-                    .Include(fr => fr.Interviewer)
-                    .OrderByDescending(fr => fr.UpdatedAt ?? fr.CreatedAt)
+                var recentActivity = await _context.QuestionnaireResponses
+                    .Where(qr => (qr.UpdatedAt ?? qr.CreatedAt) >= DateTime.UtcNow.AddDays(-7))
+                    .Include(qr => qr.Questionnaire)
+                    .Include(qr => qr.Farm)
+                    .Include(qr => qr.User)
+                    .OrderByDescending(qr => qr.UpdatedAt ?? qr.CreatedAt)
                     .Take(10)
-                    .Select(fr => new
+                    .Select(qr => new
                     {
-                        fr.Id,
-                        QuestionnaireName = fr.Questionnaire!.Name,
-                        FarmCode = fr.Farm!.FarmCode,
-                        FarmOwner = fr.Farm.OwnerName,
-                        Province = fr.Farm.Province,
-                        Status = fr.Status,
-                        InterviewerName = fr.Interviewer != null ? $"{fr.Interviewer.FirstName} {fr.Interviewer.LastName}" : null,
-                        LastUpdated = fr.UpdatedAt ?? fr.CreatedAt
+                        qr.Id,
+                        QuestionnaireName = qr.Questionnaire!.Name,
+                        FarmCode = qr.Farm!.FarmCode,
+                        FarmOwner = qr.Farm.OwnerName,
+                        Province = qr.Farm.Province,
+                        Status = qr.Status,
+                        InterviewerName = qr.User != null ? $"{qr.User.FirstName} {qr.User.LastName}" : null,
+                        LastUpdated = qr.UpdatedAt ?? qr.CreatedAt
                     })
                     .ToListAsync();
 

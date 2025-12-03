@@ -1,28 +1,46 @@
 import ResponsesViewer from '../components/ResponsesViewer';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { QuestionnaireService } from '@/services/questionnaireService';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function TestFormResponses() {
+export default function ResponsesPage() {
   const [activeTab, setActiveTab] = useState<'responses' | 'analytics'>('responses');
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState({
-    id: 'aaaaaaaa-1111-1111-1111-111111111111',
-    name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025'
-  });
+  const [questionnaires, setQuestionnaires] = useState<any[]|undefined>(undefined);
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any|undefined>(undefined);
 
-  const questionnaires = [
-    {
-      id: 'aaaaaaaa-1111-1111-1111-111111111111',
-      name: 'Έρευνα Ελαιοπαραγωγής Κύπρου 2025'
-    },
-    {
-      id: 'bbbbbbbb-2222-2222-2222-222222222222', 
-      name: 'Έρευνα Κτηνοτροφικών Μονάδων'
-    },
-    {
-      id: 'cccccccc-3333-3333-3333-333333333333',
-      name: 'Έρευνα Αρδευτικών Συστημάτων'
-    }
-  ];
+    useEffect(() => {
+      const loadQuestionnaires = async () => {
+        try {
+          console.log('Loading questionnaires from Cyprus API...');
+          const response = await QuestionnaireService.getQuestionnaires();
+        // Map the API response to match the App component structure
+          const mappedQuestionnaires = response.data.map((q: any) => ({
+            id: q.id,
+            name: q.name,
+            description: q.description,
+            category: q.category,
+            status: q.status,
+            currentResponses: q.currentResponses,
+            targetResponses: q.targetResponses,
+            completionRate: q.completionRate,
+            createdAt: q.createdAt,
+            samples: q.samples || [],
+            schema: q.serializedSchema ? JSON.parse(q.serializedSchema) : {display: "form", components: [] },
+            samplesCount: q.samplesCount
+          }));
+          
+          setQuestionnaires(mappedQuestionnaires);
+          if (mappedQuestionnaires.length > 0) {
+            setSelectedQuestionnaire(mappedQuestionnaires[0]);
+          }
+        } catch (error) {
+          
+        }
+      };
+  
+      loadQuestionnaires();
+    }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -37,7 +55,14 @@ export default function TestFormResponses() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
+        {!questionnaires && <Skeleton/>}
+        {(questionnaires && !questionnaires!.length) && <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-900 mb-2">
+            Δεν υπάρχουν διαθέσιμα ερωτηματολόγια για προβολή απαντήσεων.
+          </h3>
+        </div>} 
+
+        {(questionnaires && questionnaires!.length) && <><div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8 px-6">
               <button
@@ -63,7 +88,6 @@ export default function TestFormResponses() {
             </nav>
           </div>
           
-          {/* Questionnaire Selector */}
           <div className="p-4 bg-gray-50 border-b">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Επιλογή Ερωτηματολογίου:
@@ -85,7 +109,6 @@ export default function TestFormResponses() {
           </div>
         </div>
 
-        {/* Tab Content */}
         <div className="space-y-6">
           {activeTab === 'responses' && (
             <ResponsesViewer
@@ -102,21 +125,9 @@ export default function TestFormResponses() {
               language="el"
             />
           )}
-        </div>
+        </div></>}
 
-        {/* Test Data Info */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">
-            Πληροφορίες Δοκιμής
-          </h3>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p><strong>Questionnaire ID:</strong> {selectedQuestionnaire.id}</p>
-            <p><strong>Questionnaire Name:</strong> {selectedQuestionnaire.name}</p>
-            <p><strong>FormIO Schema:</strong> Δημιουργήθηκε με 6 πεδία (farmName, oliveGroveArea, κ.ά.)</p>
-            <p><strong>API Status:</strong> FormIO endpoints λειτουργικά, Analytics endpoints λειτουργικά</p>
-            <p><strong>Test Data:</strong> Προς το παρόν κενά δεδομένα, μπορούν να προστεθούν responses μέσω API</p>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

@@ -251,35 +251,72 @@ namespace CyprusAgriculture.API.Controllers
             }
         }
 
-        // GET: api/questionnaires/{id}/responses
         [HttpGet("{id}/responses")]
-        public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaireResponses(Guid id)
+        public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaireResponses(Guid id,
+            [FromQuery] string? status = null,
+            [FromQuery] string? province = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
         {
             try
             {
-                var responses = await _context.QuestionnaireResponses
-                    .Where(r => r.QuestionnaireId == id)
-                    .Select(r => new
+                var query = _context.QuestionnaireResponses
+                    .Include(fr => fr.Farm)
+                    .Include(fr => fr.User)
+                    .Where(fr => fr.QuestionnaireId == id);
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(fr => fr.Status == status);
+                }
+
+                if (!string.IsNullOrEmpty(province))
+                {
+                    // Province filtering disabled temporarily due to database schema issues
+                    // query = query.Where(fr => fr.Farm!.Province == province);
+                }
+
+                var totalCount = await query.CountAsync();
+                
+                var responses = await query
+                    .OrderByDescending(fr => fr.UpdatedAt ?? fr.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(qr => new
                     {
-                        r.Id,
-                        r.Status,
-                        r.StartedAt,
-                        r.SubmittedAt,
-                        r.CompletedAt,
-                        r.FarmName,
-                        r.Region,
-                        r.Municipality,
-                        UserName = "System User", // Fallback since User relation might not be properly set up
-                        Email = "system@agriculture.gov.cy"
+                        qr.Id,
+                        qr.FarmId,
+                        Farm = qr.Farm != null ? new
+                        {
+                            FarmCode = qr.Farm.FarmCode,
+                            OwnerName = qr.Farm.OwnerName,
+                            Province = qr.Farm.Province,
+                            Community = qr.Farm.Community
+                        } : null,
+                        qr.Status,
+                        qr.CompletionPercentage,
+                        qr.SubmittedAt,
+                        qr.UpdatedAt,
+                        qr.CreatedAt,
+                        qr.User,
+                        qr.Notes,
+                        qr.ResponseData
                     })
                     .ToListAsync();
 
-                return Ok(responses);
+                return Ok(new
+                {
+                    responses,
+                    totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving responses for questionnaire {Id}", id);
-                return StatusCode(500, "Internal server error");
+                _logger.LogError(ex, "Error getting questionnaire responses for {QuestionnaireId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
     }

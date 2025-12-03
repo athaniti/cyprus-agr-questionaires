@@ -80,8 +80,8 @@ namespace CyprusAgriculture.API.Controllers
             try
             {
                 var regionalData = await _context.QuestionnaireResponses
-                    .Where(r => !string.IsNullOrEmpty(r.Region))
-                    .GroupBy(r => r.Region)
+                    .Where(r => r.FarmId != null)
+                    .GroupBy(r => r.Farm.Province)
                     .Select(g => new
                     {
                         Region = g.Key,
@@ -220,6 +220,7 @@ namespace CyprusAgriculture.API.Controllers
                 var recentResponses = await _context.QuestionnaireResponses
                     .Include(r => r.Questionnaire)
                     .Include(r => r.User)
+                    .Include(r => r.Farm)
                     .OrderByDescending(r => r.StartedAt)
                     .Take(limit)
                     .Select(r => new
@@ -230,7 +231,7 @@ namespace CyprusAgriculture.API.Controllers
                         UserName = r.User.FirstName + " " + r.User.LastName,
                         Status = r.Status,
                         Timestamp = r.StartedAt,
-                        Region = r.Region
+                        Region = r.Farm != null ? r.Farm.Province : null
                     })
                     .ToListAsync();
 

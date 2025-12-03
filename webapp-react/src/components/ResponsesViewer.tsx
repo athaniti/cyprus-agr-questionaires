@@ -23,7 +23,7 @@ interface FormResponse {
   farm: Farm;
   status: string;
   completionPercentage: number;
-  interviewer?: Interviewer;
+  user?: Interviewer;
   submittedAt?: string;
   updatedAt?: string;
   createdAt: string;
@@ -62,14 +62,8 @@ export default function ResponsesViewer({
     setLoading(true);
     setError(null);
     
-    try {
-      console.log('Fetching responses for questionnaire:', questionnaireId);
-      console.log('API URL:', `${API_BASE_URL}/FormResponses/questionnaire/${questionnaireId}`);
-      
-      const response = await fetch(`${API_BASE_URL}/FormResponses/questionnaire/${questionnaireId}/responses`);
-      
-      console.log('API Response status:', response.status);
-      console.log('API Response headers:', response.headers);
+    try {      
+      const response = await fetch(`${API_BASE_URL}/questionnaires/${questionnaireId}/responses`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -340,8 +334,8 @@ export default function ResponsesViewer({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {response.interviewer 
-                    ? `${response.interviewer.firstName} ${response.interviewer.lastName}`
+                  {response.user 
+                    ? `${response.user.firstName} ${response.user.lastName}`
                     : (language === 'el' ? 'Μη ανατεθειμένο' : 'Unassigned')
                   }
                 </td>

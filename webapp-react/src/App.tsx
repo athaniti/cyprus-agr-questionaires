@@ -15,7 +15,7 @@ import LocationManagementHub from './components/LocationManagementHub';
 import QuotaManagement from './components/QuotaManagement';
 import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
 import QuotaAllocationManager from './components/QuotaAllocationManager';
-import TestFormResponses from './pages/TestFormResponses';
+import ResponsesPage from './pages/ResponsesPage';
 import { FormBuilder, Form } from "@formio/react";
 import { QuestionnaireService } from './services/questionnaireService';
 import '@formio/js/dist/formio.full.min.css';
@@ -476,7 +476,7 @@ function AppContent() {
             <p className="text-gray-600">{language === 'el' ? 'Αναφορές και αναλύσεις' : 'Reports and analytics'}</p>
           </div>;
         case 'form-responses':
-          return <TestFormResponses />;
+          return <ResponsesPage />;
         case 'users':
           return <UserManagement language={language} />;
         case 'themes':

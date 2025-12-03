@@ -12,6 +12,10 @@ namespace CyprusAgriculture.API.Models
         public Guid QuestionnaireId { get; set; }
 
         [Required]
+        [Column("farm_id")]
+        public string FarmId { get; set; } = string.Empty;
+
+        [Required]
         public Guid UserId { get; set; }
 
         [Column(TypeName = "jsonb")]
@@ -21,28 +25,35 @@ namespace CyprusAgriculture.API.Models
         [MaxLength(20)]
         public string Status { get; set; } = "draft"; // draft, submitted, completed
 
+        [Column("completion_percentage")]
+        public decimal CompletionPercentage { get; set; } = 0;
+
+        [Column("notes")]
+        public string? Notes { get; set; }
+
         public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? SubmittedAt { get; set; }
 
         public DateTime? CompletedAt { get; set; }
 
-        // Farm/Location information
-        [MaxLength(200)]
-        public string? FarmName { get; set; }
-
-        [MaxLength(100)]
-        public string? Region { get; set; }
-
-        [MaxLength(100)]
-        public string? Municipality { get; set; }
-
-        [MaxLength(50)]
-        public string? PostalCode { get; set; }
 
         // GPS coordinates
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Column("created_by")]
+        public Guid? CreatedBy { get; set; }
+
+        [Column("updated_at")]
+        public DateTime? UpdatedAt { get; set; }
+
+        [Column("updated_by")]
+        public Guid? UpdatedBy { get; set; }
+
 
         // Navigation properties
         [ForeignKey("QuestionnaireId")]
@@ -50,5 +61,10 @@ namespace CyprusAgriculture.API.Models
 
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;
+
+        [ForeignKey("FarmId")]
+        public virtual Farm? Farm { get; set; } = null!;
+
+
     }
 }

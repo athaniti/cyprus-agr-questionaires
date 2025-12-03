@@ -303,10 +303,18 @@ namespace CyprusAgriculture.API.Migrations
                 table: "questionnaire_responses",
                 newName: "postal_code");
 
-            migrationBuilder.RenameColumn(
+            migrationBuilder.DropColumn(
                 name: "FarmName",
-                table: "questionnaire_responses",
-                newName: "farm_name");
+                table: "questionnaire_responses");
+            migrationBuilder.DropColumn(
+                name: "Region",
+                table: "questionnaire_responses");
+            migrationBuilder.DropColumn(
+                name: "Municipality",
+                table: "questionnaire_responses");
+            migrationBuilder.DropColumn(
+                name: "PostalCode",
+                table: "questionnaire_responses");
 
             migrationBuilder.RenameColumn(
                 name: "CompletedAt",
@@ -690,6 +698,84 @@ namespace CyprusAgriculture.API.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.AddColumn<decimal>(
+                table: "questionnaire_responses",
+                name: "completion_percentage",
+                type: "numeric",
+                nullable: false, 
+                defaultValue: 0
+            );
+
+            migrationBuilder.AddColumn<string>(
+                table: "questionnaire_responses",
+                name: "notes",
+                type: "text",
+                nullable: true
+            );
+
+            migrationBuilder.AddColumn<DateTime>(
+                table: "questionnaire_responses",
+                name: "created_at",
+                type: "timestamp with time zone",
+                nullable: false, 
+                defaultValueSql: "NOW()"
+            );
+
+            migrationBuilder.AddColumn<Guid>(
+                table: "questionnaire_responses",
+                name: "created_by",
+                type: "uuid",
+                nullable: true
+            );
+
+            migrationBuilder.AddColumn<DateTime>(
+                table: "questionnaire_responses",
+                name: "updated_at",
+                type: "timestamp with time zone",
+                nullable: true
+            );
+
+            migrationBuilder.AddColumn<Guid>(
+                table: "questionnaire_responses",
+                name: "updated_by",
+                type: "uuid",
+                nullable: true
+            );
+
+            migrationBuilder.AddColumn<string>(
+                table: "questionnaire_responses",
+                name: "farm_id",
+                type: "text",
+                nullable: true
+            );
+
+            migrationBuilder.AddForeignKey(
+                table: "questionnaire_responses",
+                name: "FK_questionnaire_responses_farms_farm_id",
+                column: "farm_id",
+                principalTable: "farms",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade
+            );
+
+            migrationBuilder.AddForeignKey(
+                table: "questionnaire_responses",
+                name: "FK_questionnaire_responses_users_created_by",
+                column: "created_by",
+                principalTable: "users",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade
+            );
+
+            migrationBuilder.AddForeignKey(
+                table: "questionnaire_responses",
+                name: "FK_questionnaire_responses_users_updated_by",
+                column: "updated_by",
+                principalTable: "users",
+                principalColumn: "id",
+                onDelete: ReferentialAction.Cascade
+            );
 
             migrationBuilder.UpdateData(
                 table: "locations",

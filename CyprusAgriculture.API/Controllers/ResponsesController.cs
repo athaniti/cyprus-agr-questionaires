@@ -30,6 +30,7 @@ namespace CyprusAgriculture.API.Controllers
                 var query = _context.QuestionnaireResponses
                     .Include(r => r.Questionnaire)
                     .Include(r => r.User)
+                    .Include(r => r.Farm)
                     .AsQueryable();
 
                 if (questionnaireId.HasValue)
@@ -44,7 +45,7 @@ namespace CyprusAgriculture.API.Controllers
 
                 if (!string.IsNullOrEmpty(region))
                 {
-                    query = query.Where(r => r.Region == region);
+                    query = query.Where(r => r.Farm!=null && r.Farm.Province == region);
                 }
 
                 var responses = await query
@@ -58,9 +59,13 @@ namespace CyprusAgriculture.API.Controllers
                         r.StartedAt,
                         r.SubmittedAt,
                         r.CompletedAt,
-                        r.FarmName,
-                        r.Region,
-                        r.Municipality,
+                        Farm = r.Farm != null ? new
+                        {
+                            FarmCode = r.Farm.FarmCode,
+                            OwnerName = r.Farm.OwnerName,
+                            Province = r.Farm.Province,
+                            Community = r.Farm.Community
+                        } : null,
                         UserName = r.User.FirstName + " " + r.User.LastName,
                         r.User.Email
                     })
@@ -101,10 +106,13 @@ namespace CyprusAgriculture.API.Controllers
                     response.StartedAt,
                     response.SubmittedAt,
                     response.CompletedAt,
-                    response.FarmName,
-                    response.Region,
-                    response.Municipality,
-                    response.PostalCode,
+                    Farm = response.Farm != null ? new
+                    {
+                        FarmCode = response.Farm.FarmCode,
+                        OwnerName = response.Farm.OwnerName,
+                        Province = response.Farm.Province,
+                        Community = response.Farm.Community
+                    } : null,
                     response.Latitude,
                     response.Longitude,
                     UserName = response.User.FirstName + " " + response.User.LastName,
@@ -130,10 +138,6 @@ namespace CyprusAgriculture.API.Controllers
                     UserId = request.UserId, // In real app, get from JWT token
                     ResponseData = request.ResponseData ?? "{}",
                     Status = "draft",
-                    FarmName = request.FarmName,
-                    Region = request.Region,
-                    Municipality = request.Municipality,
-                    PostalCode = request.PostalCode,
                     Latitude = request.Latitude,
                     Longitude = request.Longitude
                 };
@@ -169,10 +173,6 @@ namespace CyprusAgriculture.API.Controllers
 
                 response.ResponseData = request.ResponseData ?? response.ResponseData;
                 response.Status = request.Status ?? response.Status;
-                response.FarmName = request.FarmName ?? response.FarmName;
-                response.Region = request.Region ?? response.Region;
-                response.Municipality = request.Municipality ?? response.Municipality;
-                response.PostalCode = request.PostalCode ?? response.PostalCode;
                 response.Latitude = request.Latitude ?? response.Latitude;
                 response.Longitude = request.Longitude ?? response.Longitude;
 
@@ -238,7 +238,7 @@ namespace CyprusAgriculture.API.Controllers
             try
             {
                 var summary = await _context.QuestionnaireResponses
-                    .GroupBy(r => r.Region)
+                    .GroupBy(r => r.FarmId)
                     .Select(g => new
                     {
                         Region = g.Key,
