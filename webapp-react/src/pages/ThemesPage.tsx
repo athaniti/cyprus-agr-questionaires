@@ -38,25 +38,9 @@ import {
   Upload, Palette, Type, Monitor, Smartphone, Save, RotateCcw
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Theme, ThemePreview } from '@/components/ThemePreview';
 
-export interface Theme {
-  id: string;
-  name: string;
-  description?: string;
-  logoImageBase64?: string;
-  logoPosition: 'left' | 'center' | 'right';
-  bodyFont: string;
-  bodyFontSize: number;
-  headerFont: string;
-  headerFontSize: number;
-  primaryColor: string;
-  secondaryColor: string;
-  backgroundColor: string;
-  textColor: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  isDefault?: boolean;
-}
+
 
 interface ThemesProps {
   language: 'el' | 'en';
@@ -1181,122 +1165,7 @@ export function ThemesPage({ language }: ThemesProps) {
 
           <div className="flex-1 overflow-auto p-4">
 
-            {selectedTheme && (
-              <div className={`border rounded-lg overflow-hidden mx-auto mt-4 ${
-                previewMode === 'mobile' ? 'w-96' : 'w-full'
-              }`}>
-                <div 
-                  className="p-8"
-                  style={{ 
-                    backgroundColor: selectedTheme.backgroundColor,
-                    color: selectedTheme.textColor,
-                    fontFamily: selectedTheme.bodyFont,
-                    fontSize: `${selectedTheme.bodyFontSize}px`
-                  }}
-                >
-                  {/* Logo */}
-                  {selectedTheme.logoImageBase64 && (
-                    <div className={`mb-8 ${
-                      selectedTheme.logoPosition === 'center' ? 'text-center' :
-                      selectedTheme.logoPosition === 'right' ? 'text-right' : 'text-left'
-                    }`}>
-                      <img 
-                        src={selectedTheme.logoImageBase64} 
-                        alt="Logo" 
-                        className="h-16 inline-block"
-                      />
-                    </div>
-                  )}
-
-                  {/* Header */}
-                  <h1 
-                    className="mb-6"
-                    style={{
-                      fontFamily: selectedTheme.headerFont,
-                      fontSize: `${selectedTheme.headerFontSize}px`,
-                      color: selectedTheme.primaryColor,
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {language === 'el' ? 'Έρευνα Γεωργικών Εκμεταλλεύσεων Κύπρου 2025' : 'Cyprus Agricultural Holdings Survey 2025'}
-                  </h1>
-
-                  {/* Sample Form */}
-                  <div className="space-y-6">
-                    <div>
-                      <h2 
-                        className="mb-4"
-                        style={{
-                          fontFamily: selectedTheme.headerFont,
-                          fontSize: `${selectedTheme.headerFontSize * 0.75}px`,
-                          color: selectedTheme.secondaryColor,
-                          fontWeight: 'semibold'
-                        }}
-                      >
-                        {language === 'el' ? 'Βασικές Πληροφορίες' : 'Basic Information'}
-                      </h2>
-
-                      <div className="grid gap-4">
-                        <div>
-                          <label className="block mb-2 font-medium">
-                            {language === 'el' ? 'Όνομα Αγρότη:' : 'Farmer Name:'}
-                          </label>
-                          <input 
-                            type="text" 
-                            className="w-full p-3 border rounded-lg"
-                            placeholder={language === 'el' ? 'Εισάγετε το όνομά σας' : 'Enter your name'}
-                            style={{ borderColor: selectedTheme.primaryColor }}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block mb-2 font-medium">
-                            {language === 'el' ? 'Μέγεθος Εκμετάλλευσης (στρέμματα):' : 'Farm Size (acres):'}
-                          </label>
-                          <input 
-                            type="number" 
-                            className="w-full p-3 border rounded-lg"
-                            placeholder="0"
-                            style={{ borderColor: selectedTheme.primaryColor }}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block mb-2 font-medium">
-                            {language === 'el' ? 'Κύριος Τύπος Καλλιέργειας:' : 'Main Crop Type:'}
-                          </label>
-                          <select 
-                            className="w-full p-3 border rounded-lg"
-                            style={{ borderColor: selectedTheme.primaryColor }}
-                          >
-                            <option>{language === 'el' ? 'Επιλέξτε τύπο καλλιέργειας...' : 'Select crop type...'}</option>
-                            <option>{language === 'el' ? 'Σιτηρά' : 'Cereals'}</option>
-                            <option>{language === 'el' ? 'Λαχανικά' : 'Vegetables'}</option>
-                            <option>{language === 'el' ? 'Φρούτα' : 'Fruits'}</option>
-                            <option>{language === 'el' ? 'Ελιές' : 'Olives'}</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                      <button 
-                        className="px-6 py-3 rounded-lg text-white font-medium"
-                        style={{ backgroundColor: selectedTheme.primaryColor }}
-                      >
-                        {language === 'el' ? 'Προηγούμενο' : 'Previous'}
-                      </button>
-                      <button 
-                        className="px-6 py-3 rounded-lg text-white font-medium"
-                        style={{ backgroundColor: selectedTheme.secondaryColor }}
-                      >
-                        {language === 'el' ? 'Επόμενο' : 'Next'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {selectedTheme && <ThemePreview theme={selectedTheme} mode={previewMode} />}
 
           </div>
           

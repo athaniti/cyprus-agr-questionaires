@@ -1,13 +1,15 @@
-import { QuestionnaireAssignment } from "@/components/QuestionnaireAssignment";
 import { QuestionnaireService } from "@/services/questionnaireService";
 import { useEffect, useRef, useState } from "react";
-
-import { FormBuilder, Form } from "@formio/react";
+import { Button } from '../components/ui/button';
+import { 
+  Monitor, Smartphone
+} from 'lucide-react';
+import { FormBuilder } from "@formio/react";
 import '@formio/js/dist/formio.full.min.css';
 
 import { ThemeSelector } from '@/components/ThemeSelector';
-import { Theme } from "./ThemesPage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Theme, ThemePreview } from "@/components/ThemePreview";
 
 // CSS για FormIO controls visibility
 const formioCSS = `
@@ -171,68 +173,12 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
   const [showViewModal, setShowViewModal] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const savedFormSchema = useRef<any>();
 
   const [isSaving, setIsSaving] = useState(false);
-  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
-  const [assignmentQuestionnaire, setAssignmentQuestionnaire] = useState<any>(null);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
-  const [themeSelectorQuestionnaire, setThemeSelectorQuestionnaire] = useState<any>(null);
 
-  // Mock users data (in real app would come from API)
-  const mockUsers = [
-    {
-      id: '1',
-      name: 'Γιάννης Παπαδόπουλος',
-      email: 'giannis.papadopoulos@agriculture.gov.cy',
-      role: 'admin',
-      department: 'Γεωργία',
-      location: 'Λευκωσία'
-    },
-    {
-      id: '2',
-      name: 'Μαρία Νικολάου',
-      email: 'maria.nikolaou@agriculture.gov.cy',
-      role: 'surveyor',
-      department: 'Κτηνοτροφία',
-      location: 'Λεμεσός'
-    },
-    {
-      id: '3',
-      name: 'Άντρη Γεωργίου',
-      email: 'andri.georgiou@agriculture.gov.cy',
-      role: 'surveyor',
-      department: 'Αλιεία',
-      location: 'Πάφος'
-    },
-    {
-      id: '4',
-      name: 'Πέτρος Κωνσταντίνου',
-      email: 'petros.konstantinou@agriculture.gov.cy',
-      role: 'respondent',
-      department: 'Γεωργία',
-      location: 'Λάρνακα'
-    },
-    {
-      id: '5',
-      name: 'Ελένη Μιχαήλ',
-      email: 'eleni.michael@agriculture.gov.cy',
-      role: 'respondent',
-      department: 'Κτηνοτροφία',
-      location: 'Αμμόχωστος'
-    }
-  ];
-
-  // Συνάρτηση για να πάρουμε user details από ID
-  const getUserById = (userId: string) => {
-    return mockUsers.find(user => user.id === userId);
-  };
-
-  // Συνάρτηση για να πάρουμε assigned users details
-  const getAssignedUsersDetails = (userIds: string[]) => {
-    return userIds.map(id => getUserById(id)).filter(Boolean);
-  };
 
   // Συνάρτηση για αποθήκευση ερωτηματολογίου
   const saveQuestionnaire = async () => {
@@ -297,110 +243,32 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
 
   const handleSelectTheme = (questionnaire: any) => {
     console.log('Opening theme selector for questionnaire:', questionnaire.id);
-    setThemeSelectorQuestionnaire(questionnaire);
+    setSelectedQuestionnaire(questionnaire);
     setShowThemeSelector(true);
   };
 
-  const handleThemeSelection = (theme: any) => {
-    if (themeSelectorQuestionnaire) {
-      console.log('Applying theme to questionnaire:', {
-        questionnaireId: themeSelectorQuestionnaire.id,
-        themeId: theme.id,
-        themeName: theme.name
-      });
-
-      // Update questionnaire with selected theme
-      setQuestionnaires(prev => prev.map(q => 
-        q.id === themeSelectorQuestionnaire.id 
-          ? { ...q, theme: theme, updatedAt: new Date().toISOString() }
-          : q
-      ));
+  const handleThemeSelection = async (theme: any) => {
+    if (selectedQuestionnaire) {
+        selectedQuestionnaire.themeId = theme.id;
+        selectedQuestionnaire.serializedSchema = JSON.stringify(selectedQuestionnaire.schema);
+        const response = await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id, selectedQuestionnaire);
+        const updatedQuestionnaire = { ...response, schema:JSON.parse(response.serializedScehma)};
+        setQuestionnaires(prev => prev.map(q => 
+          q.id === updatedQuestionnaire.id 
+            ? updatedQuestionnaire
+            : q
+        ));
 
       alert(
         language === 'el' 
-          ? `Θέμα "${theme.name}" εφαρμόστηκε επιτυχώς στο ερωτηματολόγιο "${themeSelectorQuestionnaire.name}"!`
-          : `Theme "${theme.name}" applied successfully to questionnaire "${themeSelectorQuestionnaire.name}"!`
+          ? `Θέμα "${theme.name}" εφαρμόστηκε επιτυχώς στο ερωτηματολόγιο "${selectedQuestionnaire.name}"!`
+          : `Theme "${theme.name}" applied successfully to questionnaire "${selectedQuestionnaire.name}"!`
       );
 
       setShowThemeSelector(false);
-      setThemeSelectorQuestionnaire(null);
+      setSelectedQuestionnaire(null);
     }
-  };
-
-  const handleQuestionnaireAssignment = async (userIds: string[], dueDate: string) => {
-    try {
-      console.log('Assigning questionnaire:', assignmentQuestionnaire.id, 'to users:', userIds, 'due:', dueDate);
-      
-      // Update questionnaire status to 'assigned'
-      setQuestionnaires(prev => prev.map(q => 
-        q.id === assignmentQuestionnaire.id 
-          ? { 
-              ...q, 
-              status: 'assigned', 
-              assignedUsers: userIds,
-              dueDate: dueDate,
-              assignedAt: new Date().toISOString()
-            }
-          : q
-      ));
-
-      alert(
-        language === 'el' 
-          ? `Ερωτηματολόγιο ανατέθηκε επιτυχώς σε ${userIds.length} χρήστες!`
-          : `Questionnaire assigned successfully to ${userIds.length} users!`
-      );
-
-      setShowAssignmentModal(false);
-      setAssignmentQuestionnaire(null);
-    } catch (error) {
-      console.error('Error assigning questionnaire:', error);
-      alert(
-        language === 'el' 
-          ? 'Σφάλμα κατά την ανάθεση ερωτηματολογίου'
-          : 'Error assigning questionnaire'
-      );
-    }
-  };
-
-  // Συνάρτηση για αποσυσχέτιση ερωτηματολογίου
-  const handleUnassignQuestionnaire = async (questionnaire: any) => {
-    const confirmUnassign = window.confirm(
-      language === 'el' 
-        ? `Είστε σίγουροι ότι θέλετε να αποσυσχετίσετε το ερωτηματολόγιο "${questionnaire.name}" από όλους τους χρήστες;`
-        : `Are you sure you want to unassign questionnaire "${questionnaire.name}" from all users?`
-    );
-
-    if (!confirmUnassign) return;
-
-    try {
-      // Update questionnaire status back to 'draft'
-      setQuestionnaires(prev => prev.map(q => 
-        q.id === questionnaire.id 
-          ? { 
-              ...q, 
-              status: 'draft', 
-              assignedUsers: undefined,
-              dueDate: undefined,
-              assignedAt: undefined
-            }
-          : q
-      ));
-
-      alert(
-        language === 'el' 
-          ? 'Ερωτηματολόγιο αποσυσχετίστηκε επιτυχώς!'
-          : 'Questionnaire unassigned successfully!'
-      );
-    } catch (error) {
-      console.error('Error unassigning questionnaire:', error);
-      alert(
-        language === 'el' 
-          ? 'Σφάλμα κατά την αποσυσχέτιση ερωτηματολογίου'
-          : 'Error unassigning questionnaire'
-      );
-    }
-  };
-  
+  };  
   // Safe questionnaires state with default data - will be replaced by API data
   const [questionnaires, setQuestionnaires] = useState<any[]>([]);
 
@@ -796,90 +664,6 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                 </p>
               </div>
 
-              {/* Assignment Information */}
-              {selectedQuestionnaire.status === 'assigned' && selectedQuestionnaire.assignedUsers && (
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    {language === 'el' ? 'Ανατεθειμένο σε' : 'Assigned to'}
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">
-                        {language === 'el' 
-                          ? `Ανατεθειμένο σε ${selectedQuestionnaire.assignedUsers.length} χρήστες:`
-                          : `Assigned to ${selectedQuestionnaire.assignedUsers.length} users:`
-                        }
-                      </span>
-                    </div>
-                    
-                    {/* Users List */}
-                    <div className="space-y-2">
-                      {getAssignedUsersDetails(selectedQuestionnaire.assignedUsers).map((user: any) => (
-                        <div key={user.id} className="bg-white p-3 rounded-lg border border-orange-200">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{user.name}</p>
-                              <p className="text-sm text-gray-500">{user.email}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                                user.role === 'surveyor' ? 'bg-blue-100 text-blue-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {user.role === 'admin' ? (language === 'el' ? 'Διαχειριστής' : 'Administrator') :
-                                 user.role === 'surveyor' ? (language === 'el' ? 'Ερευνητής' : 'Surveyor') :
-                                 (language === 'el' ? 'Ερωτώμενος' : 'Respondent')}
-                              </span>
-                              {user.department && (
-                                <p className="text-xs text-gray-500 mt-1">{user.department}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {selectedQuestionnaire.dueDate && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">
-                          {language === 'el' ? 'Λήξη:' : 'Due:'} 
-                        </span>
-                        {' '}
-                        {new Date(selectedQuestionnaire.dueDate).toLocaleDateString(
-                          language === 'el' ? 'el-GR' : 'en-US',
-                          { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }
-                        )}
-                      </p>
-                    )}
-                    {selectedQuestionnaire.assignedAt && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">
-                          {language === 'el' ? 'Ανατέθηκε:' : 'Assigned:'} 
-                        </span>
-                        {' '}
-                        {new Date(selectedQuestionnaire.assignedAt).toLocaleDateString(
-                          language === 'el' ? 'el-GR' : 'en-US',
-                          { 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          }
-                        )}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-2">
                   {language === 'el' ? 'Ημερομηνία Δημιουργίας' : 'Created Date'}
@@ -906,17 +690,6 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                   className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   {language === 'el' ? 'Επεξεργασία' : 'Edit'}
-                </button>
-              )}
-              {selectedQuestionnaire.status === 'assigned' && (
-                <button
-                  onClick={() => {
-                    setShowViewModal(false);
-                    handleUnassignQuestionnaire(selectedQuestionnaire);
-                  }}
-                  className="flex-1 px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  {language === 'el' ? 'Αποσυσχέτιση' : 'Unassign'}
                 </button>
               )}
             </div>
@@ -1018,37 +791,44 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
     
             {/* Form Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <Form src="" form={selectedQuestionnaire.schema}/>
+                <div className="flex gap-2">
+                    <Button
+                    variant={previewMode === 'desktop' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPreviewMode('desktop')}
+                    className="gap-2"
+                    >
+                    <Monitor className="h-4 w-4" />
+                    {language === 'el' ? 'Προεπισκόπηση Υπολογιστή' : 'Desktop Preview'}
+                    </Button>
+                    <Button
+                    variant={previewMode === 'mobile' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPreviewMode('mobile')}
+                    className="gap-2"
+                    >
+                    <Smartphone className="h-4 w-4" />
+                    {language === 'el' ? 'Προεπισκόπηση Κινητού' : 'Mobile Preview'}
+                    </Button>
+                </div>
+                <ThemePreview theme={(themes??[]).find(t=>t.id === selectedQuestionnaire.themeId)??themes![0]} mode={previewMode} questionnaire={selectedQuestionnaire}/>
             </div>
           </div>
         </div>
       )}
 
-      {/* Assignment Modal */}
-      {showAssignmentModal && assignmentQuestionnaire && (
-        <QuestionnaireAssignment
-          questionnaireId={assignmentQuestionnaire.id}
-          questionnaireName={assignmentQuestionnaire.name}
-          onClose={() => {
-            setShowAssignmentModal(false);
-            setAssignmentQuestionnaire(null);
-          }}
-          onAssign={handleQuestionnaireAssignment}
-          language={language}
-        />
-      )}
 
       {/* Theme Selector Modal */}
-      {showThemeSelector && themeSelectorQuestionnaire && (
+      {showThemeSelector && selectedQuestionnaire && (
         <ThemeSelector
           isOpen={showThemeSelector}
           onClose={() => {
             setShowThemeSelector(false);
-            setThemeSelectorQuestionnaire(null);
+            setSelectedQuestionnaire(null);
           }}
+          allThemes={themes ?? []}
           onThemeSelect={handleThemeSelection}
-          questionnaireName={themeSelectorQuestionnaire.name}
-          currentThemeId={themeSelectorQuestionnaire.theme?.id}
+          questionnaire={selectedQuestionnaire}
           language={language}
         />
       )}
