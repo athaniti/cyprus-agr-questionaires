@@ -199,31 +199,51 @@ namespace CyprusAgriculture.API.Controllers
                     return NotFound($"Questionnaire {questionnaireId} not found");
                 }
 
-                var performance = await (from qr in _context.QuestionnaireResponses
-                                       join u in _context.Users on qr.UserId equals u.Id into userGroup
-                                       from interviewer in userGroup.DefaultIfEmpty()
-                                       where qr.QuestionnaireId == questionnaireId && qr.UserId != null
-                                       group new { qr, interviewer } by new { 
-                                           InterviewerId = qr.UserId,
-                                           InterviewerName = interviewer != null ? $"{interviewer.FirstName} {interviewer.LastName}" : "Unknown"
-                                       } into g
-                                       select new
+                var responses = _context.QuestionnaireResponses.Include(qr=>qr.User).Where(qr => qr.QuestionnaireId == questionnaireId).ToList();
+                var interviewerGroups = responses.GroupBy(qr => new { qr.UserId, InterviewerName = qr.User != null ? qr.User.FirstName + " " + qr.User.LastName : "Unknown" }).ToList();
+                var performance = interviewerGroups.Select(g =>new
                                        {
-                                           InterviewerId = g.Key.InterviewerId,
+                                           InterviewerId = g.Key.UserId,
                                            InterviewerName = g.Key.InterviewerName,
                                            TotalAssigned = g.Count(),
-                                           Completed = g.Count(x => x.qr.Status == "submitted"),
-                                           InProgress = g.Count(x => x.qr.Status == "in_progress"),
-                                           Draft = g.Count(x => x.qr.Status == "draft"),
-                                           SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
-                                           AverageCompletion = (double)g.Average(x => (decimal)x.qr.CompletionPercentage),
-                                           AverageDaysToComplete = g.Where(x => x.qr.Status == "submitted" && x.qr.SubmittedAt != null)
-                                                                    .Select(x => (x.qr.SubmittedAt!.Value - x.qr.CreatedAt).TotalDays)
+                                           Completed = g.Count(x => x.Status == "submitted"),
+                                           InProgress = g.Count(x => x.Status == "in_progress"),
+                                           Draft = g.Count(x => x.Status == "draft"),
+                                           SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.Status == "submitted") / g.Count() * 100 : 0,
+                                           AverageCompletion = (double)g.Average(x => (decimal)x.CompletionPercentage),
+                                           AverageDaysToComplete = g.Where(x => x.Status == "submitted" && x.SubmittedAt != null)
+                                                                    .Select(x => (x.SubmittedAt!.Value - x.CreatedAt).TotalDays)
                                                                     .DefaultIfEmpty(0)
                                                                     .Average()
                                        })
                                        .OrderByDescending(x => x.SuccessRate)
-                                       .ToListAsync();
+                                       .ToList();
+
+                // var performance = await (from qr in _context.QuestionnaireResponses
+                //                        join u in _context.Users on qr.UserId equals u.Id into userGroup
+                //                        from interviewer in userGroup.DefaultIfEmpty()
+                //                        where qr.QuestionnaireId == questionnaireId
+                //                        group new { qr, interviewer } by new { 
+                //                            InterviewerId = qr.UserId,
+                //                            InterviewerName = $"{interviewer.FirstName} {interviewer.LastName}"
+                //                        } into g
+                //                        select new
+                //                        {
+                //                            InterviewerId = g.Key.InterviewerId,
+                //                            InterviewerName = g.Key.InterviewerName,
+                //                            TotalAssigned = g.Count(),
+                //                            Completed = g.Count(x => x.qr.Status == "submitted"),
+                //                            InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                //                            Draft = g.Count(x => x.qr.Status == "draft"),
+                //                            SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
+                //                            AverageCompletion = (double)g.Average(x => (decimal)x.qr.CompletionPercentage),
+                //                            AverageDaysToComplete = g.Where(x => x.qr.Status == "submitted" && x.qr.SubmittedAt != null)
+                //                                                     .Select(x => (x.qr.SubmittedAt!.Value - x.qr.CreatedAt).TotalDays)
+                //                                                     .DefaultIfEmpty(0)
+                //                                                     .Average()
+                //                        })
+                //                        .OrderByDescending(x => x.SuccessRate)
+                //                        .ToListAsync();
 
                 return Ok(new
                 {

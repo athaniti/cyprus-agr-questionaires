@@ -17,7 +17,7 @@ interface Interviewer {
   lastName: string;
 }
 
-interface FormResponse {
+interface QuestionnaireResponse {
   id: string;
   farmId: string;
   farm: Farm;
@@ -41,10 +41,10 @@ export default function ResponsesViewer({
   questionnaireName, 
   language = 'el' 
 }: ResponsesViewerProps) {
-  const [responses, setResponses] = useState<FormResponse[]>([]);
+  const [responses, setResponses] = useState<QuestionnaireResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedResponse, setSelectedResponse] = useState<FormResponse | null>(null);
+  const [selectedResponse, setSelectedResponse] = useState<QuestionnaireResponse | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
@@ -86,20 +86,9 @@ export default function ResponsesViewer({
     }
   };
 
-  const viewResponseDetails = async (response: FormResponse) => {
-    try {
-      const detailResponse = await fetch(
-        `${API_BASE_URL}/api/FormResponses/farm/${response.farmId}/questionnaire/${questionnaireId}`
-      );
-
-      if (detailResponse.ok) {
-        const fullResponse = await detailResponse.json();
-        setSelectedResponse(fullResponse);
-        setShowDetails(true);
-      }
-    } catch (error) {
-      console.error('Error fetching response details:', error);
-    }
+  const viewResponseDetails = async (questionnaireResponse: QuestionnaireResponse) => {
+    setSelectedResponse(questionnaireResponse);
+    setShowDetails(true);
   };
 
   const getStatusColor = (status: string) => {
