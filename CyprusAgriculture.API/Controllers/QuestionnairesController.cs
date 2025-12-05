@@ -23,14 +23,13 @@ namespace CyprusAgriculture.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaires(
             [FromQuery] string? status = null,
-            [FromQuery] string? category = null,
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+            [FromQuery] int pageSize = 100)
         {
             try
             {
-                _logger.LogInformation("GetQuestionnaires called with status={Status}, category={Category}, page={Page}, pageSize={PageSize}", 
-                    status, category, page, pageSize);
+                _logger.LogInformation("GetQuestionnaires called with status={Status}, page={Page}, pageSize={PageSize}", 
+                    status, page, pageSize);
                 
                 var query = _context.Questionnaires.AsQueryable();
 
@@ -39,10 +38,7 @@ namespace CyprusAgriculture.API.Controllers
                     query = query.Where(q => q.Status == status);
                 }
 
-                if (!string.IsNullOrEmpty(category))
-                {
-                    query = query.Where(q => q.Category == category);
-                }
+
 
                 var totalCount = await query.CountAsync();
                 var questionnaires = await query
@@ -54,30 +50,13 @@ namespace CyprusAgriculture.API.Controllers
                         q.Id,
                         q.Name,
                         q.Description,
-                        q.Category,
                         q.Status,
                         SerializedSchema = q.Schema,
-                        q.TargetResponses,
-                        q.CurrentResponses,
-                        CompletionRate = q.TargetResponses > 0 ? (double)q.CurrentResponses / q.TargetResponses * 100 : 0,
+                        ResponsesCount = q.Responses.Count,
                         CreatedBy = "System User", // Fallback when no user relation
                         q.CreatedAt,
-                        q.PublishedAt,
                         q.UpdatedAt,
-                        q.ThemeId,
-                        SamplesCount = _context.Samples.Count(s => s.QuestionnaireId == q.Id),
-                        Samples = _context.Samples
-                            .Where(s => s.QuestionnaireId == q.Id)
-                            .Select(s => new
-                            {
-                                s.Id,
-                                s.Name,
-                                s.TargetSize,
-                                s.Status,
-                                s.CreatedAt
-                            })
-                            .Take(3)
-                            .ToList()
+                        q.ThemeId
                     })
                     .ToListAsync();
 
@@ -118,26 +97,13 @@ namespace CyprusAgriculture.API.Controllers
                     questionnaire.Id,
                     questionnaire.Name,
                     questionnaire.Description,
-                    questionnaire.Category,
                     questionnaire.Status,
                     SerializedSchema = questionnaire.Schema,
-                    questionnaire.TargetResponses,
-                    questionnaire.CurrentResponses,
-                    CreatedBy = "System User", // Fallback since Creator relation might not be properly set up
+                    ResponsesCount = questionnaire.Responses.Count,
+                    CreatedBy = "System User", // Fallback when no user relation
                     questionnaire.CreatedAt,
-                    questionnaire.PublishedAt,
                     questionnaire.UpdatedAt,
-                    questionnaire.ThemeId,
-                    ResponseCount = questionnaire.Responses.Count,
-                    Quotas = questionnaire.Quotas.Select(q => new
-                    {
-                        q.Id,
-                        q.Region,
-                        q.Municipality,
-                        q.TargetCount,
-                        q.CurrentCount,
-                        q.Category
-                    })
+                    questionnaire.ThemeId
                 });
             }
             catch (Exception ex)
@@ -158,12 +124,10 @@ namespace CyprusAgriculture.API.Controllers
                 {
                     Name = request.Name,
                     Description = request.Description,
-                    Category = request.Category,
                     Schema = request.SerializedSchema,
-                    TargetResponses = request.TargetResponses ?? 0,
                     ThemeId = request.ThemeId,
                     CreatedBy = userId,
-                    Status = "draft"
+                    Status = request.Status
                 };
 
                 _context.Questionnaires.Add(questionnaire);
@@ -173,13 +137,14 @@ namespace CyprusAgriculture.API.Controllers
                 {
                     questionnaire.Id,
                     questionnaire.Name,
-                    questionnaire.Status,
-                    questionnaire.CreatedAt,
                     questionnaire.Description,
-                    questionnaire.Category,
-                    questionnaire.ThemeId,
-                    questionnaire.TargetResponses,
-                    SerializedScehma = questionnaire.Schema
+                    questionnaire.Status,
+                    SerializedSchema = questionnaire.Schema,
+                    ResponsesCount = questionnaire.Responses.Count,
+                    CreatedBy = "System User", // Fallback when no user relation
+                    questionnaire.CreatedAt,
+                    questionnaire.UpdatedAt,
+                    questionnaire.ThemeId
                 });
             }
             catch (Exception ex)
@@ -203,10 +168,9 @@ namespace CyprusAgriculture.API.Controllers
 
                 questionnaire.Name = request.Name;
                 questionnaire.Description = request.Description ;
-                questionnaire.Category = request.Category;
                 questionnaire.Schema = request.SerializedSchema;
                 questionnaire.ThemeId = request.ThemeId;
-                questionnaire.TargetResponses = request.TargetResponses ?? 0;
+                questionnaire.Status = request.Status;
                 questionnaire.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -215,13 +179,14 @@ namespace CyprusAgriculture.API.Controllers
                 {
                     questionnaire.Id,
                     questionnaire.Name,
-                    questionnaire.Status,
-                    questionnaire.CreatedAt,
                     questionnaire.Description,
-                    questionnaire.Category,
-                    questionnaire.ThemeId,
-                    questionnaire.TargetResponses,
-                    SerializedScehma = questionnaire.Schema
+                    questionnaire.Status,
+                    SerializedSchema = questionnaire.Schema,
+                    ResponsesCount = questionnaire.Responses.Count,
+                    CreatedBy = "System User", // Fallback when no user relation
+                    questionnaire.CreatedAt,
+                    questionnaire.UpdatedAt,
+                    questionnaire.ThemeId
                 });
             }
             catch (Exception ex)
@@ -335,14 +300,12 @@ namespace CyprusAgriculture.API.Controllers
         [JsonPropertyName("description")]
         public string? Description { get; set; }
 
-        [JsonPropertyName("category")]
-        public string Category { get; set; } = string.Empty;
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "active";
 
         [JsonPropertyName("serializedSchema")]
         public string SerializedSchema { get; set; } = string.Empty;
-
-        [JsonPropertyName("targetResponses")]
-        public int? TargetResponses { get; set; }
 
         [JsonPropertyName("themeId")]
         public Guid ThemeId {get;set;} = Guid.Empty;

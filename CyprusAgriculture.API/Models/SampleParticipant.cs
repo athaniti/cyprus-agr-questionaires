@@ -18,20 +18,8 @@ namespace CyprusAgriculture.API.Models
         [Column("farm_id")]
         public string FarmId { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(20)]
-        [Column("status")]
-        public string Status { get; set; } = "active"; // active, invited, completed, excluded
 
-        [Column("selection_priority")]
-        public int SelectionPriority { get; set; } = 0; // Προτεραιότητα επιλογής
 
-        [Column("inclusion_reason")]
-        [MaxLength(500)]
-        public string? InclusionReason { get; set; } // Λόγος συμπερίληψης
-
-        [Column("additional_data", TypeName = "jsonb")]
-        public string AdditionalData { get; set; } = "{}"; // Πρόσθετα δεδομένα σε JSON
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

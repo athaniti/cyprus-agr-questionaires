@@ -32,9 +32,7 @@ namespace CyprusAgriculture.API.Data
         public DbSet<Farm> Farms { get; set; }
         public DbSet<Sample> Samples { get; set; }
         public DbSet<SampleParticipant> SampleParticipants { get; set; }
-        public DbSet<SampleAssignment> SampleAssignments { get; set; }
         public DbSet<SampleGroup> SampleGroups { get; set; }
-        public DbSet<SampleGroupFarm> SampleGroupFarms { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Theme> Themes { get; set; }
         
@@ -155,14 +153,11 @@ namespace CyprusAgriculture.API.Data
                 entity.Property(s => s.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
                 entity.Property(s => s.Description).HasColumnName("description").HasMaxLength(1000);
                 entity.Property(s => s.TargetSize).HasColumnName("target_size").IsRequired();
-                entity.Property(s => s.CurrentSize).HasColumnName("current_size");
-                entity.Property(s => s.Status).HasColumnName("status").IsRequired().HasMaxLength(20);
                 entity.Property(s => s.FilterCriteria).HasColumnName("filter_criteria").HasColumnType("jsonb");
                 entity.Property(s => s.QuestionnaireId).HasColumnName("questionnaire_id");
                 entity.Property(s => s.CreatedBy).HasColumnName("created_by").IsRequired();
                 entity.Property(s => s.CreatedAt).HasColumnName("created_at");
                 entity.Property(s => s.UpdatedAt).HasColumnName("updated_at");
-                entity.Property(s => s.CompletedAt).HasColumnName("completed_at");
             });
 
             // Configure SampleParticipant entity
@@ -182,32 +177,6 @@ namespace CyprusAgriculture.API.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure SampleAssignment entity
-            modelBuilder.Entity<SampleAssignment>(entity =>
-            {
-                entity.ToTable("sample_assignments");
-                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-
-                entity.HasOne(sa => sa.Sample)
-                    .WithMany()
-                    .HasForeignKey(sa => sa.SampleId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(sa => sa.User)
-                    .WithMany()
-                    .HasForeignKey(sa => sa.UserId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(sa => sa.AssignedByUser)
-                    .WithMany()
-                    .HasForeignKey(sa => sa.AssignedBy)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                // Index for efficient querying
-                entity.HasIndex(sa => new { sa.SampleId, sa.UserId }).IsUnique();
-                entity.HasIndex(sa => sa.UserId);
-                entity.HasIndex(sa => sa.Status);
-            });
 
             // Configure SampleGroup entity
             modelBuilder.Entity<SampleGroup>(entity =>
@@ -232,33 +201,6 @@ namespace CyprusAgriculture.API.Data
 
                 entity.HasIndex(sg => sg.SampleId);
                 entity.HasIndex(sg => sg.InterviewerId);
-            });
-
-            // Configure SampleGroupFarm entity
-            modelBuilder.Entity<SampleGroupFarm>(entity =>
-            {
-                entity.ToTable("sample_group_farms");
-                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-
-                entity.HasOne(sgf => sgf.SampleGroup)
-                    .WithMany(sg => sg.SampleGroupFarms)
-                    .HasForeignKey(sgf => sgf.SampleGroupId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(sgf => sgf.Farm)
-                    .WithMany()
-                    .HasForeignKey(sgf => sgf.FarmId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(sgf => sgf.AssignedByUser)
-                    .WithMany()
-                    .HasForeignKey(sgf => sgf.AssignedBy)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                // Unique constraint: one farm can only be in one group per sample
-                entity.HasIndex(sgf => new { sgf.SampleGroupId, sgf.FarmId }).IsUnique();
-                entity.HasIndex(sgf => sgf.FarmId);
-                entity.HasIndex(sgf => sgf.Status);
             });
 
             // Configure Invitation entity

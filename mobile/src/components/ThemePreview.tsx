@@ -1,27 +1,11 @@
 import { Form } from "@formio/react";
 import '@formio/js/dist/formio.full.min.css';
-import { Questionnaire } from "@/services/questionnaireService";
+import { Questionnaire, Theme } from "@/services/questionnaires";
 
-export interface Theme {
-  id: string;
-  name: string;
-  description?: string;
-  logoImageBase64?: string;
-  logoPosition: 'left' | 'center' | 'right';
-  bodyFont: string;
-  bodyFontSize: number;
-  headerFont: string;
-  headerFontSize: number;
-  primaryColor: string;
-  secondaryColor: string;
-  backgroundColor: string;
-  textColor: string;
-  createdAt: Date;
-  updatedAt?: Date;
-  isDefault?: boolean;
-}
+
 
 export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mode: 'mobile'|'desktop', questionnaire? : Questionnaire|undefined }) => (
+  
     <>
     <div className={`border rounded-lg overflow-hidden mx-auto mt-4 ${
                 mode === 'mobile' ? 'w-96' : 'w-full'

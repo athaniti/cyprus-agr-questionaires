@@ -16,20 +16,13 @@ namespace CyprusAgriculture.API.Models
         [MaxLength(1000)]
         public string? Description { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string Category { get; set; } = string.Empty; // Livestock, Crops, Irrigation, Equipment, etc.
 
         [Required]
         [MaxLength(20)]
-        public string Status { get; set; } = "draft"; // draft, active, completed, archived
+        public string Status { get; set; } = "active"; // active, inactive
 
         [Column(TypeName = "jsonb")]
         public string Schema { get; set; } = "{}"; // Form.io JSON Schema
-
-        public int TargetResponses { get; set; } = 0;
-
-        public int CurrentResponses { get; set; } = 0;
 
         [Required]
         public Guid CreatedBy { get; set; }
@@ -39,10 +32,6 @@ namespace CyprusAgriculture.API.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
-
-        public DateTime? PublishedAt { get; set; }
-
-        public DateTime? ClosedAt { get; set; }
 
         // Navigation properties
         [ForeignKey("CreatedBy")]

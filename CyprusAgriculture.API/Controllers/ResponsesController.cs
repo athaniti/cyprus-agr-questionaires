@@ -189,7 +189,6 @@ namespace CyprusAgriculture.API.Controllers
                     var questionnaire = await _context.Questionnaires.FindAsync(response.QuestionnaireId);
                     if (questionnaire != null)
                     {
-                        questionnaire.CurrentResponses++;
                         await _context.SaveChangesAsync();
                     }
                 }

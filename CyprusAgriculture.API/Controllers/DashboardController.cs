@@ -28,7 +28,7 @@ namespace CyprusAgriculture.API.Controllers
                 var completedResponses = await _context.QuestionnaireResponses.CountAsync(r => r.Status == "completed");
                 var pendingInvitations = await _context.QuestionnaireInvitations.CountAsync(i => i.Status == "pending");
                 var totalUsers = await _context.Users.CountAsync(u => u.IsActive);
-                var completionRate = await CalculateOverallCompletionRate();
+                var completionRate = 0;
 
                 // If no data exists, return mock data
                 if (activeQuestionnaires == 0 && totalResponses == 0)
@@ -184,32 +184,6 @@ namespace CyprusAgriculture.API.Controllers
             }
         }
 
-        // GET: api/dashboard/category-distribution
-        [HttpGet("category-distribution")]
-        public async Task<ActionResult<IEnumerable<object>>> GetCategoryDistribution()
-        {
-            try
-            {
-                var categoryData = await _context.Questionnaires
-                    .Include(q => q.Responses)
-                    .GroupBy(q => q.Category)
-                    .Select(g => new
-                    {
-                        Category = g.Key,
-                        QuestionnaireCount = g.Count(),
-                        ResponseCount = g.SelectMany(q => q.Responses).Count(),
-                        CompletedResponseCount = g.SelectMany(q => q.Responses).Count(r => r.Status == "completed")
-                    })
-                    .ToListAsync();
-
-                return Ok(categoryData);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving category distribution");
-                return StatusCode(500, "Internal server error");
-            }
-        }
 
         // GET: api/dashboard/recent-activity
         [HttpGet("recent-activity")]
@@ -263,18 +237,6 @@ namespace CyprusAgriculture.API.Controllers
                 _logger.LogError(ex, "Error retrieving recent activity");
                 return StatusCode(500, "Internal server error");
             }
-        }
-
-        private async Task<double> CalculateOverallCompletionRate()
-        {
-            var totalTargetResponses = await _context.Questionnaires
-                .Where(q => q.Status == "active")
-                .SumAsync(q => q.TargetResponses);
-
-            var totalCompletedResponses = await _context.QuestionnaireResponses
-                .CountAsync(r => r.Status == "completed");
-
-            return totalTargetResponses > 0 ? (double)totalCompletedResponses / totalTargetResponses * 100 : 0;
         }
     }
 }

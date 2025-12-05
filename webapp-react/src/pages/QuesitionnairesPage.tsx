@@ -1,4 +1,4 @@
-import { QuestionnaireService } from "@/services/questionnaireService";
+import { Questionnaire, QuestionnaireService } from "@/services/questionnaireService";
 import { useEffect, useRef, useState } from "react";
 import { Button } from '../components/ui/button';
 import { 
@@ -10,6 +10,7 @@ import '@formio/js/dist/formio.full.min.css';
 import { ThemeSelector } from '@/components/ThemeSelector';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Theme, ThemePreview } from "@/components/ThemePreview";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // CSS για FormIO controls visibility
 const formioCSS = `
@@ -167,10 +168,9 @@ interface QuestionnairesPageProps {
 export default function QuestionnairesPage({language='el' }:QuestionnairesPageProps) {
     const API_BASE_URL = 'http://localhost:5050/api';
   // Modal states
-  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<any|null>(null);
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<Questionnaire|null>(null);
   const [themes, setThemes] = useState<Theme[]|undefined>(undefined);
   const [showCreateOrUpdateModal, setShowCreateOrUpdateModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -200,7 +200,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
       if (!selectedQuestionnaire.id) {
         const response = await QuestionnaireService.createQuestionnaire(selectedQuestionnaire);
 
-        const newQuestionnaire = { ...response, schema:JSON.parse(response.serializedScehma)};
+        const newQuestionnaire = { ...response, schema:JSON.parse(response.serializedSchema)};
         setQuestionnaires(prev => [...prev, newQuestionnaire]);
         
         alert(
@@ -210,7 +210,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
         );
       } else {
         const response = await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id, selectedQuestionnaire);
-        const updatedQuestionnaire = { ...response, schema:JSON.parse(response.serializedScehma)};
+        const updatedQuestionnaire = { ...response, schema:JSON.parse(response.serializedSchema)};
         setQuestionnaires(prev => prev.map(q => 
           q.id === updatedQuestionnaire.id 
             ? updatedQuestionnaire
@@ -251,8 +251,8 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
     if (selectedQuestionnaire) {
         selectedQuestionnaire.themeId = theme.id;
         selectedQuestionnaire.serializedSchema = JSON.stringify(selectedQuestionnaire.schema);
-        const response = await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id, selectedQuestionnaire);
-        const updatedQuestionnaire = { ...response, schema:JSON.parse(response.serializedScehma)};
+        const response = await QuestionnaireService.updateQuestionnaire(selectedQuestionnaire.id!, selectedQuestionnaire);
+        const updatedQuestionnaire = { ...response, schema:JSON.parse(response.serializedSchema)};
         setQuestionnaires(prev => prev.map(q => 
           q.id === updatedQuestionnaire.id 
             ? updatedQuestionnaire
@@ -270,7 +270,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
     }
   };  
   // Safe questionnaires state with default data - will be replaced by API data
-  const [questionnaires, setQuestionnaires] = useState<any[]>([]);
+  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
 
   // Load questionnaires from API
   useEffect(() => {
@@ -304,20 +304,8 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
         console.log('Loading questionnaires from Cyprus API...');
         const response = await QuestionnaireService.getQuestionnaires();
       // Map the API response to match the App component structure
-        const mappedQuestionnaires = response.data.map((q: any) => ({
-          id: q.id,
-          name: q.name,
-          description: q.description,
-          category: q.category,
-          status: q.status,
-          currentResponses: q.currentResponses,
-          targetResponses: q.targetResponses,
-          completionRate: q.completionRate,
-          createdAt: q.createdAt,
-          samples: q.samples || [],
-          schema: q.serializedSchema ? JSON.parse(q.serializedSchema) : {display: "form", components: [] },
-          samplesCount: q.samplesCount,
-          themeId:q.themeId
+        const mappedQuestionnaires = response.data.map((q: Questionnaire) => ({
+          ...q, schema: q.serializedSchema ? JSON.parse(q.serializedSchema) : {display: "form", components: [] }
         }));
         
         setQuestionnaires(mappedQuestionnaires);
@@ -348,7 +336,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                     className="px-4 py-2 text-white rounded-xl shadow-md hover:opacity-90 transition-opacity"
                     style={{ backgroundColor: '#004B87' }}
                     onClick={() => {
-                    setSelectedQuestionnaire({themeId:(themes??[]).length ? (themes!.find(t=>t.isDefault === true)?.id ?? themes![0].id):undefined, schema:{display: "form", components: [] }});
+                    setSelectedQuestionnaire({status:'active', themeId:(themes??[]).length ? (themes!.find(t=>t.isDefault === true)?.id ?? themes![0].id):undefined, schema:{display: "form", components: [] }} as Questionnaire);
                     setShowCreateOrUpdateModal(true);
                     }}
                 >
@@ -360,157 +348,81 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {questionnaires.map((questionnaire) => (
                     <div key={questionnaire.id} className="bg-white rounded-2xl p-6 shadow-sm border-0 hover:shadow-md transition-shadow">
-                    {/* Status Badge */}
-                    <div className="flex items-center justify-between mb-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        questionnaire.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : questionnaire.status === 'draft'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : questionnaire.status === 'assigned'
-                            ? 'bg-orange-100 text-orange-800'
-                            : questionnaire.status === 'completed'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                        {questionnaire.status === 'active' && (language === 'el' ? 'Ενεργό' : 'Active')}
-                        {questionnaire.status === 'draft' && (language === 'el' ? 'Πρόχειρο' : 'Draft')}
-                        {questionnaire.status === 'assigned' && (language === 'el' ? 'Ανατεθειμένο' : 'Assigned')}
-                        {questionnaire.status === 'completed' && (language === 'el' ? 'Ολοκληρωμένο' : 'Completed')}
-                        {questionnaire.status === 'archived' && (language === 'el' ? 'Αρχειοθετημένο' : 'Archived')}
+                      <div className="flex items-center justify-between mb-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${questionnaire.status === 'active' ? 'bg-green-100 text-green-800'  : 'bg-gray-100 text-gray-800'}`}>
+                          {questionnaire.status === 'active' && (language === 'el' ? 'Ενεργό' : 'Active')}
+                          {questionnaire.status === 'inactive' && (language === 'el' ? 'Ανενεργό' : 'Inactive')}
                         </span>
                         <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => {
-                            setSelectedQuestionnaire(questionnaire);
-                            setShowViewModal(true);
-                            }}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title={language === 'el' ? 'Προβολή' : 'View'}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </button>
-                        {questionnaire.status === 'draft' && (
-                            <>
-                            <button
-                                onClick={() => {
-                                setSelectedQuestionnaire(questionnaire);
-                                setShowCreateOrUpdateModal(true);
-                                }}
-                                className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                title={language === 'el' ? 'Επεξεργασία' : 'Edit'}
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={() => handleSelectTheme(questionnaire)}
-                                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                title={language === 'el' ? 'Επιλογή Θέματος' : 'Select Theme'}
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
-                                </svg>
-                            </button>
-                            </>
-                        )}
-                        <button
-                            onClick={() => {
-                            setSelectedQuestionnaire(questionnaire);
-                            setShowPreview(true);
-                            }}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title={language === 'el' ? 'Προεπισκόπηση' : 'Preview'}
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </button>
-                        <button onClick={()=>{
-                            QuestionnaireService.deleteQuestionnaire(questionnaire.id).then(()=>{
-                            const newQuestionnaires = [...questionnaires];
-                            newQuestionnaires.splice(questionnaires.indexOf(questionnaire), 1);
-                            setQuestionnaires(newQuestionnaires);
-                            });
-                        }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                            ✕
-                        </button>
+                          <button
+                              onClick={() => {
+                              setSelectedQuestionnaire(questionnaire);
+                              setShowCreateOrUpdateModal(true);
+                              }}
+                              className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title={language === 'el' ? 'Επεξεργασία' : 'Edit'}
+                          >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                          </button>
+                          <button
+                              onClick={() => handleSelectTheme(questionnaire)}
+                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title={language === 'el' ? 'Επιλογή Θέματος' : 'Select Theme'}
+                          >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
+                              </svg>
+                          </button>
+                          <button
+                              onClick={() => {
+                              setSelectedQuestionnaire(questionnaire);
+                              setShowPreview(true);
+                              }}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title={language === 'el' ? 'Προεπισκόπηση' : 'Preview'}
+                          >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                          </button>
+                          <button onClick={()=>{
+                              QuestionnaireService.deleteQuestionnaire(questionnaire.id).then(()=>{
+                              const newQuestionnaires = [...questionnaires];
+                              newQuestionnaires.splice(questionnaires.indexOf(questionnaire), 1);
+                              setQuestionnaires(newQuestionnaires);
+                              });
+                          }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              >
+                              ✕
+                          </button>
                         </div>
-                    </div>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{questionnaire.name}</h3>
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                          {(questionnaire.description || (language === 'el' ? 'Περιγραφή ερωτηματολογίου' : 'Questionnaire description')) + ' '}
+                          ({new Date(questionnaire.createdAt).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')})
+                      </p>
 
-                    {/* Title and Description */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{questionnaire.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {questionnaire.description || (language === 'el' ? 'Περιγραφή ερωτηματολογίου' : 'Questionnaire description')}
-                    </p>
-
-                    {/* Stats */}
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">
-                            {language === 'el' ? 'Απαντήσεις' : 'Responses'}
-                        </span>
-                        <span className="font-medium text-gray-900">
-                            {questionnaire.currentResponses || questionnaire.responses || 0}/{questionnaire.targetResponses || 100}
-                        </span>
+                          <span className="text-gray-500">
+                              {language === 'el' ? 'Απαντήσεις' : 'Responses'}
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            {questionnaire.responsesCount || 0}
+                          </span>
                         </div>
-                        
-                        {/* Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${questionnaire.completionRate || 0}%` }}
-                        ></div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400">
-                            {new Date(questionnaire.createdAt).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')}
-                        </span>
-                        <span className="text-gray-600 font-medium">
-                            {questionnaire.completionRate || 0}%
-                        </span>
-                        </div>
-                    </div>
 
-                    {/* Assignment Info */}
-                    {questionnaire.status === 'assigned' && questionnaire.assignedUsers && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2 text-sm text-orange-700">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                            </svg>
-                            <span className="font-medium">
-                            {language === 'el' 
-                                ? `Ανατεθειμένο σε ${questionnaire.assignedUsers.length} χρήστες`
-                                : `Assigned to ${questionnaire.assignedUsers.length} users`
-                            }
-                            </span>
-                        </div>
-                        {questionnaire.dueDate && (
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>
-                                {language === 'el' ? 'Λήξη:' : 'Due:'} {new Date(questionnaire.dueDate).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')}
-                            </span>
-                            </div>
-                        )}
-                        </div>
-                    )}
+                      </div>
                     </div>
                 ))}
                 </div>
             </div>
         </div>
 
-        {/* Create/Edit Modal */}
+      {/* Create/Edit Modal */}
       {showCreateOrUpdateModal && selectedQuestionnaire && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
@@ -550,7 +462,7 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
             <div className="space-y-4 ">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {language === 'el' ? 'Θέμα' : 'Theme'}
+                  {language === 'el' ? 'Θέμα Ερωτηματολογίου' : 'Questionnaire Theme'}
                 </label>
                 <Select 
                       value={selectedQuestionnaire.themeId} 
@@ -567,6 +479,21 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
                         ))}
                       </SelectContent>
                     </Select>
+              </div>
+            </div>
+
+            <div className="space-y-4" style={{marginTop:20}}>
+              <div>
+                <label className="text-sm font-medium text-gray-700"
+                  htmlFor="status"
+                >
+                  {language === 'el' ? 'Ενεργό Ερωτηματολόγιο' : 'Active Questionnaire'}
+                </label>
+                <Checkbox
+                  id="status" style={{marginLeft:10}}
+                  checked={selectedQuestionnaire.status === 'active'}
+                  onCheckedChange={(checked:boolean) => setSelectedQuestionnaire({...selectedQuestionnaire, status:checked ?'active':'inactive'}) }
+                />
               </div>
             </div>
 
@@ -593,105 +520,6 @@ export default function QuestionnairesPage({language='el' }:QuestionnairesPagePr
               >
                 {language === 'el' ? 'Φόρμα ερωτηματολογίου' : 'Questionnaire form'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Modal */}
-      {showViewModal && selectedQuestionnaire && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">
-                {selectedQuestionnaire.name}
-              </h3>
-              <button
-                onClick={() => setShowViewModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Questionnaire Details */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    {language === 'el' ? 'Κατάσταση' : 'Status'}
-                  </h4>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    selectedQuestionnaire.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : selectedQuestionnaire.status === 'draft'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : selectedQuestionnaire.status === 'assigned'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {selectedQuestionnaire.status === 'active' && (language === 'el' ? 'Ενεργό' : 'Active')}
-                    {selectedQuestionnaire.status === 'draft' && (language === 'el' ? 'Πρόχειρο' : 'Draft')}
-                    {selectedQuestionnaire.status === 'assigned' && (language === 'el' ? 'Ανατεθειμένο' : 'Assigned')}
-                    {selectedQuestionnaire.status === 'completed' && (language === 'el' ? 'Ολοκληρωμένο' : 'Completed')}
-                  </span>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    {language === 'el' ? 'Απαντήσεις' : 'Responses'}
-                  </h4>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {selectedQuestionnaire.currentResponses || selectedQuestionnaire.responses || 0}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">
-                  {language === 'el' ? 'Πρόοδος' : 'Progress'}
-                </h4>
-                <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                  <div 
-                    className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
-                    style={{ width: `${selectedQuestionnaire.completionRate || 0}%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-gray-600">
-                  {selectedQuestionnaire.completionRate || 0}% {language === 'el' ? 'ολοκλήρωση' : 'complete'}
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">
-                  {language === 'el' ? 'Ημερομηνία Δημιουργίας' : 'Created Date'}
-                </h4>
-                <p className="text-gray-600">
-                  {new Date(selectedQuestionnaire.createdAt).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US')}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-8">
-              <button
-                onClick={() => setShowViewModal(false)}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                {language === 'el' ? 'Κλείσιμο' : 'Close'}
-              </button>
-              {selectedQuestionnaire.status === 'draft' && (
-                <button
-                  onClick={() => {
-                    setShowViewModal(false);
-                    setShowCreateOrUpdateModal(true);
-                  }}
-                  className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  {language === 'el' ? 'Επεξεργασία' : 'Edit'}
-                </button>
-              )}
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { Header } from './components/Header';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { UserManagement } from './components/UserManagement';
-import { SampleManagement } from './components/SampleManagement';
+import { SampleManagementPage } from './pages/SampleManagementPage';
 import { ThemesPage } from './pages/ThemesPage';
 import InvitationManagement from './components/InvitationManagement';
 import LocationManagementHub from './components/LocationManagementHub';
@@ -39,7 +39,7 @@ function AppContent() {
         case 'questionnaires':
           return <QuestionnairesPage language={language}/>;
         case 'samples':
-          return <SampleManagement />;
+          return <SampleManagementPage />;
         case 'invitations':
           return <InvitationManagement />;
         case 'locations':

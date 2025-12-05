@@ -10,9 +10,9 @@ namespace CyprusAgriculture.API.Controllers;
 public class ThemesController : ControllerBase
 {
     private readonly CyprusAgricultureDbContext _context;
-    private readonly ILogger<SampleAssignmentsController> _logger;
+    private readonly ILogger<ThemesController> _logger;
 
-    public ThemesController(CyprusAgricultureDbContext context, ILogger<SampleAssignmentsController> logger)
+    public ThemesController(CyprusAgricultureDbContext context, ILogger<ThemesController> logger)
     {
         _context = context;
         _logger = logger;

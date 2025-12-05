@@ -1,27 +1,17 @@
 const API_BASE_URL = 'http://localhost:5050/api';
 
-export interface QuestionnaireRequest {
-  name: string;
-  description?: string;
-  category: string;
-  schema: any;
-  targetResponses: number;
-  createdBy: string; // In real app, get from JWT token
-}
-
-export interface QuestionnaireResponse {
+export interface Questionnaire {
   id: string;
   name: string;
   description?: string;
-  category: string;
-  status: string;
-  serializedScehma: any;
-  targetResponses: number;
-  currentResponses: number;
+  serializedSchema: string;
+  schema?: any;
   createdBy: string;
   createdAt: string;
   updatedAt?: string;
-  publishedAt?: string;
+  themeId?: string;
+  status: string;
+  responsesCount:number;
 }
 
 export class QuestionnaireService {
@@ -29,13 +19,11 @@ export class QuestionnaireService {
   // Get all questionnaires
   static async getQuestionnaires(
     status?: string,
-    category?: string,
     page: number = 1,
     pageSize: number = 100
-  ): Promise<{ data: QuestionnaireResponse[]; totalCount: number; totalPages: number }> {
+  ): Promise<{ data: Questionnaire[]; totalCount: number; totalPages: number }> {
     const params = new URLSearchParams();
     if (status) params.append('status', status);
-    if (category) params.append('category', category);
     params.append('page', page.toString());
     params.append('pageSize', pageSize.toString());
 
@@ -47,7 +35,7 @@ export class QuestionnaireService {
   }
 
   // Get questionnaire by ID
-  static async getQuestionnaire(id: string): Promise<QuestionnaireResponse> {
+  static async getQuestionnaire(id: string): Promise<Questionnaire> {
     const response = await fetch(`${API_BASE_URL}/questionnaires/${id}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -56,7 +44,7 @@ export class QuestionnaireService {
   }
 
   // Create new questionnaire
-  static async createQuestionnaire(questionnaire: QuestionnaireRequest): Promise<QuestionnaireResponse> {
+  static async createQuestionnaire(questionnaire: Partial<Questionnaire>): Promise<Questionnaire> {
     const response = await fetch(`${API_BASE_URL}/questionnaires`, {
       method: 'POST',
       headers: {
@@ -75,8 +63,8 @@ export class QuestionnaireService {
   // Update questionnaire
   static async updateQuestionnaire(
     id: string, 
-    questionnaire: Partial<QuestionnaireRequest>
-  ): Promise<QuestionnaireResponse> {
+    questionnaire: Partial<Questionnaire>
+  ): Promise<Questionnaire> {
     const response = await fetch(`${API_BASE_URL}/questionnaires/${id}`, {
       method: 'PUT',
       headers: {

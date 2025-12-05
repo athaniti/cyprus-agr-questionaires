@@ -152,7 +152,7 @@ namespace CyprusAgriculture.API.Migrations
                 table: "themes",
                 newName: "updated_at");
 
-            migrationBuilder.DropCheckConstraint(
+            migrationBuilder.DropColumn(
                 name: "IsActive",
                 table: "themes");
 
@@ -375,13 +375,13 @@ namespace CyprusAgriculture.API.Migrations
                 name: "FarmName",
                 table: "questionnaire_responses");
             migrationBuilder.DropColumn(
-                name: "Region",
+                name: "region",
                 table: "questionnaire_responses");
             migrationBuilder.DropColumn(
-                name: "Municipality",
+                name: "municipality",
                 table: "questionnaire_responses");
             migrationBuilder.DropColumn(
-                name: "PostalCode",
+                name: "postal_code",
                 table: "questionnaire_responses");
 
             migrationBuilder.RenameColumn(
@@ -1193,10 +1193,10 @@ namespace CyprusAgriculture.API.Migrations
                 table: "themes",
                 newName: "UpdatedAt");
 
-            migrationBuilder.RenameColumn(
-                name: "is_active",
+            migrationBuilder.AddColumn<bool>(
+                name: "IsActive",
                 table: "themes",
-                newName: "IsActive");
+                type: "boolean");
 
             migrationBuilder.RenameColumn(
                 name: "created_at",

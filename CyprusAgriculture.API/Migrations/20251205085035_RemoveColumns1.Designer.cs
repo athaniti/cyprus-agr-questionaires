@@ -3,6 +3,7 @@ using System;
 using CyprusAgriculture.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CyprusAgriculture.API.Migrations
 {
     [DbContext(typeof(CyprusAgricultureDbContext))]
-    partial class CyprusAgricultureDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251205085035_RemoveColumns1")]
+    partial class RemoveColumns1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -587,7 +590,7 @@ namespace CyprusAgriculture.API.Migrations
                         {
                             Id = new Guid("a1b2c3d4-e5f6-4789-a1b2-c3d4e5f67890"),
                             Code = "01",
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 132, DateTimeKind.Utc).AddTicks(9112),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 214, DateTimeKind.Utc).AddTicks(4126),
                             IsActive = true,
                             Latitude = 35.1855659,
                             LocationLevel = "location",
@@ -599,7 +602,7 @@ namespace CyprusAgriculture.API.Migrations
                         {
                             Id = new Guid("b2c3d4e5-f6a7-4890-b2c3-d4e5f6a78901"),
                             Code = "02",
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 133, DateTimeKind.Utc).AddTicks(1306),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 214, DateTimeKind.Utc).AddTicks(7044),
                             IsActive = true,
                             Latitude = 34.675306200000001,
                             LocationLevel = "location",
@@ -611,7 +614,7 @@ namespace CyprusAgriculture.API.Migrations
                         {
                             Id = new Guid("c3d4e5f6-a7b8-4901-c3d4-e5f6a7b89012"),
                             Code = "03",
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 133, DateTimeKind.Utc).AddTicks(1319),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 214, DateTimeKind.Utc).AddTicks(7076),
                             IsActive = true,
                             Latitude = 34.917597100000002,
                             LocationLevel = "location",
@@ -623,7 +626,7 @@ namespace CyprusAgriculture.API.Migrations
                         {
                             Id = new Guid("d4e5f6a7-b8c9-4012-d4e5-f6a7b8c90123"),
                             Code = "04",
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 133, DateTimeKind.Utc).AddTicks(1322),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 214, DateTimeKind.Utc).AddTicks(7079),
                             IsActive = true,
                             Latitude = 34.7766904,
                             LocationLevel = "location",
@@ -635,7 +638,7 @@ namespace CyprusAgriculture.API.Migrations
                         {
                             Id = new Guid("e5f6a7b8-c9d0-4123-e5f6-a7b8c9d01234"),
                             Code = "05",
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 133, DateTimeKind.Utc).AddTicks(1324),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 214, DateTimeKind.Utc).AddTicks(7081),
                             IsActive = true,
                             Latitude = 35.126440700000003,
                             LocationLevel = "location",
@@ -1184,6 +1187,74 @@ namespace CyprusAgriculture.API.Migrations
                     b.ToTable("samples", (string)null);
                 });
 
+            modelBuilder.Entity("CyprusAgriculture.API.Models.SampleAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<Guid>("AssignedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_by");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_date");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Region")
+                        .HasColumnType("text")
+                        .HasColumnName("region");
+
+                    b.Property<Guid>("SampleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sample_id");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sample_assignments");
+
+                    b.HasIndex("AssignedBy")
+                        .HasDatabaseName("ix_sample_assignments_assigned_by");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_sample_assignments_status");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_sample_assignments_user_id");
+
+                    b.HasIndex("SampleId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sample_assignments_sample_id_user_id");
+
+                    b.ToTable("sample_assignments", (string)null);
+                });
+
             modelBuilder.Entity("CyprusAgriculture.API.Models.SampleGroup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1209,13 +1280,13 @@ namespace CyprusAgriculture.API.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("description");
 
-                    b.Property<string>("FarmIds")
-                        .HasColumnType("text")
-                        .HasColumnName("farm_ids");
-
                     b.Property<Guid?>("InterviewerId")
                         .HasColumnType("uuid")
                         .HasColumnName("interviewer_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1246,6 +1317,67 @@ namespace CyprusAgriculture.API.Migrations
                     b.ToTable("sample_groups", (string)null);
                 });
 
+            modelBuilder.Entity("CyprusAgriculture.API.Models.SampleGroupFarm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<Guid>("AssignedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_by");
+
+                    b.Property<string>("FarmId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("farm_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid>("SampleGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sample_group_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sample_group_farms");
+
+                    b.HasIndex("AssignedBy")
+                        .HasDatabaseName("ix_sample_group_farms_assigned_by");
+
+                    b.HasIndex("FarmId")
+                        .HasDatabaseName("ix_sample_group_farms_farm_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_sample_group_farms_status");
+
+                    b.HasIndex("SampleGroupId", "FarmId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sample_group_farms_sample_group_id_farm_id");
+
+                    b.ToTable("sample_group_farms", (string)null);
+                });
+
             modelBuilder.Entity("CyprusAgriculture.API.Models.SampleParticipant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1253,6 +1385,11 @@ namespace CyprusAgriculture.API.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("AdditionalData")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("additional_data");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1263,9 +1400,24 @@ namespace CyprusAgriculture.API.Migrations
                         .HasColumnType("text")
                         .HasColumnName("farm_id");
 
+                    b.Property<string>("InclusionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("inclusion_reason");
+
                     b.Property<Guid>("SampleId")
                         .HasColumnType("uuid")
                         .HasColumnName("sample_id");
+
+                    b.Property<int>("SelectionPriority")
+                        .HasColumnType("integer")
+                        .HasColumnName("selection_priority");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1367,7 +1519,7 @@ namespace CyprusAgriculture.API.Migrations
                             BackgroundColor = "#FFFFFF",
                             BodyFont = "Arial, sans-serif",
                             BodyFontSize = 14,
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 134, DateTimeKind.Utc).AddTicks(2468),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 215, DateTimeKind.Utc).AddTicks(9469),
                             Description = "Παραδοσιακό θέμα με τα χρώματα της Κύπρου",
                             HeaderFont = "Georgia, serif",
                             HeaderFontSize = 18,
@@ -1448,7 +1600,7 @@ namespace CyprusAgriculture.API.Migrations
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 134, DateTimeKind.Utc).AddTicks(8800),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 216, DateTimeKind.Utc).AddTicks(7171),
                             Email = "admin@agriculture.gov.cy",
                             FirstName = "System",
                             IsActive = true,
@@ -1458,7 +1610,7 @@ namespace CyprusAgriculture.API.Migrations
                         new
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2025, 12, 5, 11, 56, 49, 135, DateTimeKind.Utc).AddTicks(302),
+                            CreatedAt = new DateTime(2025, 12, 5, 8, 50, 34, 216, DateTimeKind.Utc).AddTicks(9162),
                             Email = "user@agriculture.gov.cy",
                             FirstName = "Demo",
                             IsActive = true,
@@ -1694,6 +1846,36 @@ namespace CyprusAgriculture.API.Migrations
                     b.Navigation("Questionnaire");
                 });
 
+            modelBuilder.Entity("CyprusAgriculture.API.Models.SampleAssignment", b =>
+                {
+                    b.HasOne("CyprusAgriculture.API.Models.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sample_assignments_users_assigned_by");
+
+                    b.HasOne("CyprusAgriculture.API.Models.Sample", "Sample")
+                        .WithMany()
+                        .HasForeignKey("SampleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sample_assignments_samples_sample_id");
+
+                    b.HasOne("CyprusAgriculture.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sample_assignments_users_user_id");
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Sample");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CyprusAgriculture.API.Models.SampleGroup", b =>
                 {
                     b.HasOne("CyprusAgriculture.API.Models.User", "CreatedByUser")
@@ -1721,6 +1903,36 @@ namespace CyprusAgriculture.API.Migrations
                     b.Navigation("Interviewer");
 
                     b.Navigation("Sample");
+                });
+
+            modelBuilder.Entity("CyprusAgriculture.API.Models.SampleGroupFarm", b =>
+                {
+                    b.HasOne("CyprusAgriculture.API.Models.User", "AssignedByUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sample_group_farms_users_assigned_by");
+
+                    b.HasOne("CyprusAgriculture.API.Models.Farm", "Farm")
+                        .WithMany()
+                        .HasForeignKey("FarmId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sample_group_farms_farms_farm_id");
+
+                    b.HasOne("CyprusAgriculture.API.Models.SampleGroup", "SampleGroup")
+                        .WithMany("SampleGroupFarms")
+                        .HasForeignKey("SampleGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sample_group_farms_sample_groups_sample_group_id");
+
+                    b.Navigation("AssignedByUser");
+
+                    b.Navigation("Farm");
+
+                    b.Navigation("SampleGroup");
                 });
 
             modelBuilder.Entity("CyprusAgriculture.API.Models.SampleParticipant", b =>
@@ -1783,6 +1995,11 @@ namespace CyprusAgriculture.API.Migrations
                     b.Navigation("Invitations");
 
                     b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("CyprusAgriculture.API.Models.SampleGroup", b =>
+                {
+                    b.Navigation("SampleGroupFarms");
                 });
 
             modelBuilder.Entity("CyprusAgriculture.API.Models.SampleParticipant", b =>

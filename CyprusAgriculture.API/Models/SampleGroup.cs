@@ -23,8 +23,11 @@ namespace CyprusAgriculture.API.Models
         [MaxLength(1000)]
         public string? Description { get; set; }
 
-        [Column("criteria")]
-        public string? Criteria { get; set; } // JSON string με κριτήρια (περιοχή, είδος, μέγεθος)
+        [Column("farm_ids", TypeName = "jsonb")]
+        public string? FarmIds {get;set;} = "{}"; // JSON string me farm ids
+
+        [Column("criteria", TypeName = "jsonb")]
+        public string? Criteria { get; set; } = "{}"; // JSON string με κριτήρια (περιοχή, είδος, μέγεθος)
 
         [Column("interviewer_id")]
         public Guid? InterviewerId { get; set; }
@@ -40,8 +43,6 @@ namespace CyprusAgriculture.API.Models
         [Column("created_by")]
         public Guid CreatedBy { get; set; }
 
-        [Column("is_active")]
-        public bool IsActive { get; set; } = true;
 
         // Navigation properties
         [ForeignKey("SampleId")]
@@ -52,7 +53,5 @@ namespace CyprusAgriculture.API.Models
 
         [ForeignKey("CreatedBy")]
         public virtual User? CreatedByUser { get; set; }
-
-        public virtual ICollection<SampleGroupFarm> SampleGroupFarms { get; set; } = new List<SampleGroupFarm>();
     }
 }

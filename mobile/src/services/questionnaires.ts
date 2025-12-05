@@ -1,21 +1,36 @@
 import { apiService, PaginatedResponse } from './api';
 
 // Types
+export interface Theme {
+  id: string;
+  name: string;
+  description?: string;
+  logoImageBase64?: string;
+  logoPosition: 'left' | 'center' | 'right';
+  bodyFont: string;
+  bodyFontSize: number;
+  headerFont: string;
+  headerFontSize: number;
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  isDefault?: boolean;
+}
 export interface Questionnaire {
   id: string;
   name: string;
   description?: string;
-  category: string;
-  status: string;
-  targetResponses: number;
-  currentResponses: number;
-  completionRate: number;
+  serializedSchema: string;
+  schema?: any;
   createdBy: string;
   createdAt: string;
-  publishedAt?: string;
-  updatedAt: string;
-  samplesCount: number;
-  samples: Sample[];
+  updatedAt?: string;
+  themeId?: string;
+  status: string;
+  responsesCount:number;
 }
 
 export interface Sample {
@@ -39,11 +54,7 @@ export interface QuestionnaireResponse {
   email: string;
 }
 
-export interface QuestionnaireDetails extends Questionnaire {
-  schema: any;
-  responseCount: number;
-  quotas: Quota[];
-}
+
 
 export interface Quota {
   id: string;
@@ -55,7 +66,10 @@ export interface Quota {
 }
 
 // Questionnaire Service
-class QuestionnaireService {
+class QuestionnairesService {
+  async getThemes():Promise<Theme[]> {
+    return apiService.get<Theme[]>('/themes');
+  }
   // Get all questionnaires with pagination and filters
   async getQuestionnaires(params?: {
     status?: string;
@@ -77,8 +91,8 @@ class QuestionnaireService {
   }
 
   // Get questionnaire by ID
-  async getQuestionnaire(id: string): Promise<QuestionnaireDetails> {
-    return apiService.get<QuestionnaireDetails>(`/questionnaires/${id}`);
+  async getQuestionnaire(id: string): Promise<Questionnaire> {
+    return apiService.get<Questionnaire>(`/questionnaires/${id}`);
   }
 
   // Get questionnaire responses
@@ -86,53 +100,8 @@ class QuestionnaireService {
     return apiService.get<QuestionnaireResponse[]>(`/questionnaires/${id}/responses`);
   }
 
-  // Get questionnaire schema
-  async getQuestionnaireSchema(id: string): Promise<{
-    id: string;
-    name: string;
-    schema: any;
-    updatedAt: string;
-  }> {
-    return apiService.get(`/questionnaires/${id}/schema`);
-  }
 
-  // Create new questionnaire
-  async createQuestionnaire(data: {
-    name: string;
-    description?: string;
-    category: string;
-    schema?: string;
-    targetResponses: number;
-    createdBy: string;
-  }): Promise<Questionnaire> {
-    return apiService.post<Questionnaire>('/questionnaires', data);
-  }
 
-  // Update questionnaire
-  async updateQuestionnaire(id: string, data: {
-    name?: string;
-    description?: string;
-    category?: string;
-    schema?: string;
-    targetResponses?: number;
-  }): Promise<void> {
-    return apiService.put<void>(`/questionnaires/${id}`, data);
-  }
-
-  // Publish questionnaire
-  async publishQuestionnaire(id: string): Promise<void> {
-    return apiService.put<void>(`/questionnaires/${id}/publish`);
-  }
-
-  // Duplicate questionnaire
-  async duplicateQuestionnaire(id: string): Promise<Questionnaire> {
-    return apiService.post<Questionnaire>(`/questionnaires/${id}/duplicate`);
-  }
-
-  // Delete questionnaire
-  async deleteQuestionnaire(id: string): Promise<void> {
-    return apiService.delete<void>(`/questionnaires/${id}`);
-  }
 }
 
-export const questionnaireService = new QuestionnaireService();
+export const questionnaireService = new QuestionnairesService();
