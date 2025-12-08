@@ -23,7 +23,7 @@ namespace CyprusAgriculture.API.Models
 
         [Required]
         [MaxLength(20)]
-        public string Status { get; set; } = "draft"; // draft, submitted, completed
+        public string Status { get; set; } = "draft"; // draft, submitted
 
         [Column("completion_percentage")]
         public decimal CompletionPercentage { get; set; } = 0;
@@ -32,10 +32,6 @@ namespace CyprusAgriculture.API.Models
         public string? Notes { get; set; }
 
         public DateTime StartedAt { get; set; } = DateTime.UtcNow;
-
-        public DateTime? SubmittedAt { get; set; }
-
-        public DateTime? CompletedAt { get; set; }
 
 
         // GPS coordinates
@@ -50,9 +46,6 @@ namespace CyprusAgriculture.API.Models
 
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
-
-        [Column("updated_by")]
-        public Guid? UpdatedBy { get; set; }
 
 
         // Navigation properties

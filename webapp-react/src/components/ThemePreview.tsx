@@ -65,11 +65,11 @@ export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mod
                   {/* Sample Form */}
                   <div className="space-y-6">
                     <div>
-                      <h2 
+                      <div 
                         className="mb-4"
                       >
-                        {questionnaire ? (questionnaire.description ?? 'Χωρίς περιγραφή') : 'Έρευνα Γεωργικών Εκμεταλλεύσεων Κύπρου 2025'}
-                      </h2>
+                        {questionnaire ? (questionnaire.description ?? 'Χωρίς περιγραφή') : 'Δοκιμαστική έρευνα'}
+                      </div>
 
                       {(questionnaire && questionnaire.schema && questionnaire.schema.components && questionnaire.schema.components.length) ?  <Form src="" form={questionnaire.schema}/> : 
                         <>

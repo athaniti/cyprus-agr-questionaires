@@ -10,10 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, ChevronRight, Filter, Loader2, AlertCircle, Square } from "lucide-react";
+import { FileText, ChevronRight, Filter, Loader2, AlertCircle, Square, Loader } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useMyQuestionnaires as useMyQuestionnaires } from "@/hooks/useMyQuestionnaires";
-import { Farm, questionnaireService, SampleGroup } from "@/services/questionnaires";
+import { Farm, questionnaireService, SampleGroup, QuestionnaireResponse } from "@/services/questionnaires";
 
 const SampleGroupsList = () => {
   const { id } = useParams();
@@ -21,6 +21,7 @@ const SampleGroupsList = () => {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
+  const [farmResponses, setFarmResponses] = useState<Record<string, QuestionnaireResponse | null>>({}); // Maps farmId to response or null (404)
   useEffect(()=>{
     setIsLoading(true);
     setIsError(false);
@@ -34,6 +35,30 @@ const SampleGroupsList = () => {
             sg.criteria = JSON.parse(sg.serizedCriteria??"{}");
             return sg;
           }));
+          
+          // Fetch response status for each farm
+          const responses: Record<string, QuestionnaireResponse | null> = {};
+          const promises = sampleGroups.flatMap(sg => 
+            sg.farmIds!.map(farmId =>
+              questionnaireService.getQuestionnaireParticipantResponse(sg.questionnaireId, farmId)
+                .then(response => {
+                  responses[farmId] = response;
+                })
+                .catch((error) => {
+                  // If 404, it means no response started yet
+                  if (error.status === 404 || error.message?.includes('404')) {
+                    responses[farmId] = null;
+                  }
+                })
+            )
+          );
+          
+          Promise.all(promises).then(() => {
+            setFarmResponses(responses);
+          }).catch(() => {
+            // Even if some calls fail, set what we have
+            setFarmResponses(responses);
+          });
         })
         return;
       }
@@ -123,6 +148,26 @@ const SampleGroupsList = () => {
                 <div className="mt-4 space-y-2 border-t pt-4">
                   {sg.farmIds!.map(farmId=> {
                     const farm = farms.find(f=>f.id === farmId);
+                    const response = farmResponses[farmId];
+                    const hasStarted = response !== undefined; // If key exists, it means we fetched it
+                    
+                    // Determine status display
+                    let statusBadge;
+                    if (!hasStarted) {
+                      // Still loading
+                      statusBadge = <Badge variant="outline" className="flex items-center gap-1"><Loader className="h-3 w-3 animate-spin" /></Badge>;
+                    } else if (response === null) {
+                      // 404 - No response started
+                      statusBadge = <Badge variant="secondary" className="bg-yellow-50 text-yellow-800 border-yellow-200">Εκκίνηση ερωτηματολογίου</Badge>;
+                    } else {
+                      // Has response - show status
+                      const statusColor = 
+                        response.status === 'completed' ? 'bg-green-50 text-green-800 border-green-200' :
+                        response.status === 'draft' ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                        'bg-gray-50 text-gray-800 border-gray-200';
+                      statusBadge = <Badge variant="outline" className={statusColor}>{response.status === 'draft' ? 'Σε διενέργεια': 'Υποβληθέν'}</Badge>;
+                    }
+                    
                     return (
                       <Link 
                         key={farmId}
@@ -130,16 +175,16 @@ const SampleGroupsList = () => {
                         className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/50 hover:bg-accent/10 hover:border-accent hover:shadow-sm transition-all duration-200 cursor-pointer group"
                       >
                         <div className="flex-1">
-                          <p className="font-medium text-foreground group-hover:text-accent transition-colors">
+                          <p className="font-medium text-foreground transition-colors">
                             {farm.farmCode}
                           </p>
-                          <p className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                          <p className="text-sm text-muted-foreground transition-colors">
                             {farm.ownerName}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground group-hover:text-accent transition-colors">
-                          <span className="whitespace-nowrap">Προβολή ερωτηματολογίου</span>
-                          <ChevronRight className="h-4 w-4" />
+                        <div className="flex items-center gap-3">
+                          {statusBadge}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />
                         </div>
                       </Link>
                     );

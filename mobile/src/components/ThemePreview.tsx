@@ -1,15 +1,38 @@
 import { Form } from "@formio/react";
 import '@formio/js/dist/formio.full.min.css';
-import { Questionnaire, Theme } from "@/services/questionnaires";
+import { Questionnaire, QuestionnaireResponse, Theme } from "@/services/questionnaires";
 
 
 
-export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mode: 'mobile'|'desktop', questionnaire? : Questionnaire|undefined }) => (
-  
+export const ThemePreview = ({ 
+  theme, 
+  mode, 
+  questionnaire, 
+  questionnaireResponse,
+  onQuestionnaireResponseChanged 
+}: { 
+  theme: Theme, 
+  mode: 'mobile'|'desktop', 
+  questionnaire? : Questionnaire|undefined, 
+  questionnaireResponse?: QuestionnaireResponse|undefined,
+  onQuestionnaireResponseChanged?: (newResponse: QuestionnaireResponse) => void
+}) => {
+
+  const handleFormChange = (submission: any) => {
+    if (!onQuestionnaireResponseChanged) return;
+    const data = submission?.data ?? submission?.submission?.data ?? submission;
+    const updated: Partial<QuestionnaireResponse> = {
+      ...(questionnaireResponse ?? {}),
+      responseData: data,
+      serializedResponseData: JSON.stringify(data),
+    };
+
+    // Cast to QuestionnaireResponse for callback convenience
+    onQuestionnaireResponseChanged(updated as QuestionnaireResponse);
+  };
+  return (
     <>
-    <div className={`border rounded-lg overflow-hidden mx-auto mt-4 ${
-                mode === 'mobile' ? 'w-96' : 'w-full'
-              }`}>
+    <div className={`border rounded-lg overflow-hidden mx-auto mt-4 w-full`}>
                 <div 
                   className="p-8"
                   style={{ 
@@ -49,13 +72,14 @@ export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mod
                   {/* Sample Form */}
                   <div className="space-y-6">
                     <div>
-                      <h2 
+                      <div 
                         className="mb-4"
                       >
-                        {questionnaire ? (questionnaire.description ?? 'Χωρίς περιγραφή') : 'Έρευνα Γεωργικών Εκμεταλλεύσεων Κύπρου 2025'}
-                      </h2>
+                        {questionnaire ? (questionnaire.description ?? 'Χωρίς περιγραφή') : 'Δοκιμαστική έρευνα'}
+                      </div>
 
-                      {(questionnaire && questionnaire.schema && questionnaire.schema.components && questionnaire.schema.components.length) ?  <Form src="" form={questionnaire.schema}/> : 
+                      {(questionnaire && questionnaire.schema && questionnaire.schema.components && questionnaire.schema.components.length) ? 
+                        <Form src="" form={questionnaire.schema} submission={{data:questionnaireResponse?.responseData}} onChange={handleFormChange} /> : 
                         <>
                             <div className="grid gap-4">
                                 <div>
@@ -120,4 +144,5 @@ export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mod
                 </div>
               </div>
     </>
-);
+  );
+}

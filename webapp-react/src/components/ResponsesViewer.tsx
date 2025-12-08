@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 const API_BASE_URL = 'http://localhost:5050/api';
 
 interface Farm {
+  id: string;
   farmCode: string;
   ownerName: string;
   province: string;
@@ -24,10 +25,11 @@ interface QuestionnaireResponse {
   status: string;
   completionPercentage: number;
   user?: Interviewer;
-  submittedAt?: string;
   updatedAt?: string;
   createdAt: string;
-  responseData?: string; // JSON string containing the actual form data
+  serializedResponseData?: string; // JSON string containing the actual form data
+  responseData?:any;
+  notes?:string;
 }
 
 interface ResponsesViewerProps {

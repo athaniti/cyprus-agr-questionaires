@@ -267,12 +267,11 @@ namespace CyprusAgriculture.API.Controllers
                         } : null,
                         qr.Status,
                         qr.CompletionPercentage,
-                        qr.SubmittedAt,
                         qr.UpdatedAt,
                         qr.CreatedAt,
                         qr.User,
                         qr.Notes,
-                        qr.ResponseData
+                        SerializedResponseData = qr.ResponseData
                     })
                     .ToListAsync();
 
@@ -292,6 +291,158 @@ namespace CyprusAgriculture.API.Controllers
             }
         }
 
+        [HttpGet("{id}/participants/{farmId}/response")]
+        public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaireParticipantResponse(Guid id, string farmId)
+        {
+            try
+            {
+                var qr = await _context.QuestionnaireResponses
+                    .Include(qr => qr.Farm)
+                    .Include(qr => qr.User)
+                    .Where(qr => qr.QuestionnaireId == id && qr.FarmId == farmId).FirstOrDefaultAsync();
+
+                if (qr == null)
+                {
+                    return NotFound(new { success = false, message = "Questionnaire response not found" });
+                }
+                
+                return Ok(new
+                    {
+                        qr.Id,
+                        qr.FarmId,
+                        Farm = qr.Farm != null ? new
+                        {
+                            FarmCode = qr.Farm.FarmCode,
+                            OwnerName = qr.Farm.OwnerName,
+                            Province = qr.Farm.Province,
+                            Community = qr.Farm.Community
+                        } : null,
+                        qr.Status,
+                        qr.CompletionPercentage,
+                        qr.UpdatedAt,
+                        qr.CreatedAt,
+                        qr.User,
+                        SerializedResponseData = qr.ResponseData,
+                        qr.Notes,
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting questionnaire response for {QuestionnaireId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/participants/{farmId}/response")]
+        public async Task<ActionResult<IEnumerable<object>>> CreateEmptyQuestionnaireParticipantResponse(Guid id, string farmId)
+        {
+            try
+            {
+                var qr = await _context.QuestionnaireResponses
+                    .Include(qr => qr.Farm)
+                    .Include(qr => qr.User)
+                    .Where(qr => qr.QuestionnaireId == id && qr.FarmId == farmId).FirstOrDefaultAsync();
+
+                if (qr != null)
+                {
+                    throw new InvalidOperationException("Response already exists");
+                }
+
+                var farm = await _context.Farms.FindAsync(farmId);
+                if (farm == null)
+                {
+                    return NotFound("Farm not found");
+                }
+                
+                var newResponse = new QuestionnaireResponse
+                {
+                    FarmId = farmId,
+                    Status = "draft",
+                    StartedAt = DateTime.UtcNow,
+                    CreatedBy = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                    QuestionnaireId = id,
+                    UserId = Guid.Parse("11111111-1111-1111-1111-111111111111")
+                };
+                await _context.QuestionnaireResponses.AddAsync(newResponse);
+                await _context.SaveChangesAsync();
+                
+                return Ok(new
+                    {
+                        newResponse.Id,
+                        newResponse.FarmId,
+                        Farm = farm != null ? new
+                        {
+                            FarmCode = farm.FarmCode,
+                            OwnerName = farm.OwnerName,
+                            Province = farm.Province,
+                            Community = farm.Community
+                        } : null,
+                        newResponse.Status,
+                        newResponse.CompletionPercentage,
+                        newResponse.UpdatedAt,
+                        newResponse.CreatedAt,
+                        newResponse.User,
+                        SerializedResponseData = newResponse.ResponseData,
+                        newResponse.Notes,
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating questionnaire response for {QuestionnaireId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+            }
+        }
+
+
+        [HttpPut("{id}/participants/{farmId}/response")]
+        public async Task<ActionResult<IEnumerable<object>>> UpdateQuestionnaireParticipantResponse([FromRoute]Guid id, [FromRoute]string farmId, [FromBody]UpdateQuestionnaireResponseRequest responseRequest)
+        {
+            try
+            {
+                var qr = await _context.QuestionnaireResponses
+                    .Include(qr => qr.Farm)
+                    .Include(qr => qr.User)
+                    .Where(qr => qr.QuestionnaireId == id && qr.FarmId == farmId).FirstOrDefaultAsync();
+
+                if (qr == null)
+                {
+                    return NotFound(new { success = false, message = "Questionnaire response not found" });
+                }
+                
+                qr.Notes = responseRequest.Notes;
+                qr.Status = responseRequest.Status;
+                qr.ResponseData = responseRequest.SerializedResponseData;
+                qr.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                
+                return Ok(new
+                    {
+                        qr.Id,
+                        qr.FarmId,
+                        Farm = qr.Farm != null ? new
+                        {
+                            FarmCode = qr.Farm.FarmCode,
+                            OwnerName = qr.Farm.OwnerName,
+                            Province = qr.Farm.Province,
+                            Community = qr.Farm.Community
+                        } : null,
+                        qr.Status,
+                        qr.CompletionPercentage,
+                        qr.UpdatedAt,
+                        qr.CreatedAt,
+                        qr.User,
+                        SerializedResponseData = qr.ResponseData,
+                        qr.Notes,
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating questionnaire response for {QuestionnaireId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+            }
+        }
+
+        
         [HttpGet("{id}/sample-groups")]
         public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaireSampleGroups(Guid id, [FromQuery] string? userId = null)
         {
@@ -345,5 +496,12 @@ namespace CyprusAgriculture.API.Controllers
 
         [JsonPropertyName("themeId")]
         public Guid ThemeId {get;set;} = Guid.Empty;
+    }
+
+    public class UpdateQuestionnaireResponseRequest
+    {
+        public string SerializedResponseData { get; set; }
+        public string Status { get; set; }
+        public string? Notes {get;set;}
     }
 }

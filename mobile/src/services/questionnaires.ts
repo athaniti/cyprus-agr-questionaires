@@ -49,18 +49,26 @@ export interface SampleGroup {
   interviewerId?: string;
 }
 
+export interface Interviewer {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
 export interface QuestionnaireResponse {
   id: string;
+  farmId: string;
+  farm: Farm;
   status: string;
-  startedAt: string;
-  submittedAt?: string;
-  completedAt?: string;
-  farmName?: string;
-  region?: string;
-  municipality?: string;
-  userName: string;
-  email: string;
+  completionPercentage: number;
+  user?: Interviewer;
+  updatedAt?: string;
+  createdAt: string;
+  serializedResponseData?: string; // JSON string containing the actual form data
+  responseData?:any;
+  notes?:string;
 }
+
+
 
 export interface Farm {
   id: string;
@@ -69,13 +77,6 @@ export interface Farm {
   province: string;
   community: string;
   farmType: string;
-  totalArea: number;
-  economicSize?: string;
-  mainCrop?: string;
-  livestockType?: string;
-  legalStatus?: string;
-  status?: string;
-  createdAt?: string;
 }
 
 
@@ -119,10 +120,6 @@ class QuestionnairesService {
     return apiService.get<Questionnaire>(`/questionnaires/${id}`);
   }
 
-  // Get questionnaire responses
-  async getQuestionnaireResponses(id: string): Promise<QuestionnaireResponse[]> {
-    return apiService.get<QuestionnaireResponse[]>(`/questionnaires/${id}/responses`);
-  }
 
   async getSamplrGroups(id: string, params?: {
     userId?: string;
@@ -140,6 +137,18 @@ class QuestionnairesService {
   async getSampleParticipants(sampleId: string): Promise<Farm[]> {
     const endpoint = `/samples/${sampleId}/participants`;
     return apiService.get<Farm[]>(endpoint);
+  }
+
+  async getQuestionnaireParticipantResponse(id: string, farmId:string): Promise<QuestionnaireResponse> {
+    return apiService.get<QuestionnaireResponse>(`/questionnaires/${id}/participants/${farmId}/response`);
+  }
+
+  async createEmptyQuestionnaireParticipantResponse(id: string, farmId:string): Promise<QuestionnaireResponse> {
+    return apiService.post<QuestionnaireResponse>(`/questionnaires/${id}/participants/${farmId}/response`);
+  }
+
+  async updateQuestionnaireParticipantResponse(id: string, farmId:string, responseData: QuestionnaireResponse): Promise<QuestionnaireResponse> {
+    return apiService.put<QuestionnaireResponse>(`/questionnaires/${id}/participants/${farmId}/response`, responseData);
   }
 }
 

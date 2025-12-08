@@ -189,7 +189,7 @@ export function ThemesPage({ language }: ThemesProps) {
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   
   // Theme editor form state
-  const [formData, setFormData] = useState<Partial<Theme>>({
+  const [formData, setFormData] = useState<Theme>({
     name: '',
     description: '',
     logoPosition: 'left',
@@ -201,7 +201,7 @@ export function ThemesPage({ language }: ThemesProps) {
     secondaryColor: '#0C9A8F',
     backgroundColor: '#FFFFFF',
     textColor: '#333333'
-  });
+  } as Theme);
 
   const fetchThemes = async () => {
     
@@ -251,7 +251,7 @@ export function ThemesPage({ language }: ThemesProps) {
       secondaryColor: '#0C9A8F',
       backgroundColor: '#FFFFFF',
       textColor: '#333333'
-    });
+    } as Theme);
     setShowThemeEditor(true);
   };
 
@@ -897,7 +897,7 @@ export function ThemesPage({ language }: ThemesProps) {
               </div>
 
               {/* Right Column - Live Preview */}
-              <div className="lg:col-span-1 space-y-4 overflow-y-auto max-h-[75vh]">
+              <div className="lg:col-span-1 space-y-4 ">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">{t.preview}</h3>
                   <div className="flex gap-2">
@@ -924,142 +924,22 @@ export function ThemesPage({ language }: ThemesProps) {
                   </div>
                 </div>
 
-                {/* Enhanced Preview Container */}
-                <div className="border rounded-lg overflow-hidden shadow-lg w-full">
-                  <div className={`transition-all duration-300 ${
-                    previewMode === 'mobile' ? 'max-w-sm mx-auto' : 'w-full'
-                  }`}>
-                    <div 
-                      className="p-6 min-h-[400px]"
-                      style={{ 
-                        backgroundColor: formData.backgroundColor,
-                        color: formData.textColor,
-                        fontFamily: formData.bodyFont,
-                        fontSize: `${formData.bodyFontSize}px`,
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      {/* Logo Preview */}
-                      {formData.logoImageBase64 && (
-                        <div className={`mb-6 transition-all duration-300 ${
-                          formData.logoPosition === 'center' ? 'text-center' :
-                          formData.logoPosition === 'right' ? 'text-right' : 'text-left'
-                        }`}>
-                          <img 
-                            src={formData.logoImageBase64} 
-                            alt="Logo" 
-                            className="h-12 inline-block object-contain transition-all duration-300"
-                            style={{ maxWidth: '200px' }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Header Preview */}
-                      <h1 
-                        className="mb-4 transition-all duration-300"
-                        style={{
-                          fontFamily: formData.headerFont,
-                          fontSize: `${formData.headerFontSize || 24}px`,
-                          color: formData.primaryColor,
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        {formData.name || (language === 'el' ? 'Δείγμα Ερωτηματολογίου' : 'Sample Questionnaire')}
-                      </h1>
-
-                      {formData.description && (
-                        <p className="mb-6 text-gray-600 transition-all duration-300">
-                          {formData.description}
-                        </p>
-                      )}
-
-                      {/* Sample Form Elements */}
-                      <div className="space-y-4">
-                        <div>
-                          <label 
-                            className="block mb-2 font-medium transition-colors duration-300"
-                            style={{ color: formData.textColor }}
-                          >
-                            {language === 'el' ? 'Όνομα Αγρότη:' : 'Farmer Name:'}
-                          </label>
-                          <input 
-                            type="text" 
-                            className="w-full p-3 border rounded-lg transition-all duration-300 focus:outline-none focus:ring-2"
-                            placeholder={language === 'el' ? 'Εισάγετε όνομα' : 'Enter name'}
-                            style={{ 
-                              borderColor: formData.primaryColor,
-                              fontSize: `${formData.bodyFontSize}px`,
-                              fontFamily: formData.bodyFont
-                            }}
-                          />
-                        </div>
-
-                        <div>
-                          <label 
-                            className="block mb-2 font-medium transition-colors duration-300"
-                            style={{ color: formData.textColor }}
-                          >
-                            {language === 'el' ? 'Τύπος Καλλιέργειας:' : 'Crop Type:'}
-                          </label>
-                          <select 
-                            className="w-full p-3 border rounded-lg transition-all duration-300 focus:outline-none focus:ring-2"
-                            style={{ 
-                              borderColor: formData.primaryColor,
-                              fontSize: `${formData.bodyFontSize}px`,
-                              fontFamily: formData.bodyFont
-                            }}
-                          >
-                            <option>{language === 'el' ? 'Επιλέξτε...' : 'Select...'}</option>
-                            <option>{language === 'el' ? 'Σιτηρά' : 'Cereals'}</option>
-                            <option>{language === 'el' ? 'Λαχανικά' : 'Vegetables'}</option>
-                            <option>{language === 'el' ? 'Φρούτα' : 'Fruits'}</option>
-                          </select>
-                        </div>
-
-                        <div className="flex gap-3 pt-4">
-                          <button 
-                            type="button"
-                            className="px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 hover:shadow-lg"
-                            style={{ 
-                              backgroundColor: formData.primaryColor,
-                              fontSize: `${formData.bodyFontSize}px`,
-                              fontFamily: formData.bodyFont
-                            }}
-                          >
-                            {language === 'el' ? 'Προηγούμενο' : 'Previous'}
-                          </button>
-                          <button 
-                            type="button"
-                            className="px-6 py-3 rounded-lg text-white font-medium transition-all duration-300 hover:shadow-lg"
-                            style={{ 
-                              backgroundColor: formData.secondaryColor,
-                              fontSize: `${formData.bodyFontSize}px`,
-                              fontFamily: formData.bodyFont
-                            }}
-                          >
-                            {language === 'el' ? 'Επόμενο' : 'Next'}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Preview Footer */}
-                      <div className="mt-6 pt-4 border-t border-gray-200">
-                        <p className="text-xs text-gray-500 text-center">
-                          {language === 'el' ? 
-                            'Ζωντανή προεπισκόπηση - οι αλλαγές εφαρμόζονται αυτόματα' : 
-                            'Live preview - changes apply automatically'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <ThemePreview theme={formData} mode={previewMode}/>
+                {/* Preview Footer */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 text-center">
+                    {language === 'el' ? 
+                      'Ζωντανή προεπισκόπηση - οι αλλαγές εφαρμόζονται αυτόματα' : 
+                      'Live preview - changes apply automatically'
+                    }
+                  </p>
                 </div>
               </div>
             </div>
 
 
             </div>
-                        {/* Actions */}
+            {/* Actions */}
             <div className="flex justify-between gap-4 mt-6 pt-4 border-t">
               <div className="flex gap-2">
                 <Button
@@ -1079,7 +959,7 @@ export function ThemesPage({ language }: ThemesProps) {
                       headerFontSize: 24,
                       bodyFont: 'system-ui, sans-serif',
                       bodyFontSize: 14
-                    });
+                    } as Theme);
                   }}
                   className="gap-2"
                 >

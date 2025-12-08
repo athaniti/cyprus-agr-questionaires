@@ -13,15 +13,3 @@ export const useMyQuestionnaires = (params: {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
-
-
-
-// Hook for getting questionnaire responses
-export const useQuestionnaireResponses = (id: string) => {
-  return useQuery({
-    queryKey: ['questionnaire', id, 'responses'],
-    queryFn: () => questionnaireService.getQuestionnaireResponses(id),
-    enabled: !!id,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
-};

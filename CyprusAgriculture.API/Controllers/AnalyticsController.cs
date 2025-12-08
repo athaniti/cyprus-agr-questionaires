@@ -211,8 +211,8 @@ namespace CyprusAgriculture.API.Controllers
                                            Draft = g.Count(x => x.Status == "draft"),
                                            SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.Status == "submitted") / g.Count() * 100 : 0,
                                            AverageCompletion = (double)g.Average(x => (decimal)x.CompletionPercentage),
-                                           AverageDaysToComplete = g.Where(x => x.Status == "submitted" && x.SubmittedAt != null)
-                                                                    .Select(x => (x.SubmittedAt!.Value - x.CreatedAt).TotalDays)
+                                           AverageDaysToComplete = g.Where(x => x.Status == "submitted" && x.UpdatedAt != null)
+                                                                    .Select(x => (x.UpdatedAt!.Value - x.CreatedAt).TotalDays)
                                                                     .DefaultIfEmpty(0)
                                                                     .Average()
                                        })
