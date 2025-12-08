@@ -31,7 +31,7 @@ namespace CyprusAgriculture.API.Migrations
                     table.ForeignKey(
                         name: "FK_sample_groups_questionnaires_questionnaire_id",
                         column: x => x.questionnaire_id,
-                        principalTable: "quiestionnaires",
+                        principalTable: "questionnaires",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });

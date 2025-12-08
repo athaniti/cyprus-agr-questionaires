@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Theme, ThemePreview } from './ThemePreview';
+import { Questionnaire } from '@/services/questionnaireService';
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:5050/api';
@@ -18,7 +20,7 @@ interface Interviewer {
   lastName: string;
 }
 
-interface QuestionnaireResponse {
+export interface QuestionnaireResponse {
   id: string;
   farmId: string;
   farm: Farm;
@@ -33,19 +35,18 @@ interface QuestionnaireResponse {
 }
 
 interface ResponsesViewerProps {
-  questionnaireId: string;
-  questionnaireName: string;
+  questionnaire: Questionnaire;
   language?: 'el' | 'en';
 }
 
 export default function ResponsesViewer({ 
-  questionnaireId, 
-  questionnaireName, 
+  questionnaire, 
   language = 'el' 
 }: ResponsesViewerProps) {
   const [responses, setResponses] = useState<QuestionnaireResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [themes, setThemes] = useState<Theme[]|undefined>(undefined);
   const [selectedResponse, setSelectedResponse] = useState<QuestionnaireResponse | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [filters, setFilters] = useState({
@@ -60,12 +61,36 @@ export default function ResponsesViewer({
     totalPages: 0
   });
 
+  const fetchThemes = async () => {
+    
+        try {      
+            const response = await fetch(`${API_BASE_URL}/themes`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('API Response data:', data);
+            
+            // The API returns { responses: [], totalCount: 0, ... }
+            // Extract the responses array
+            const themes = data || [];
+            
+            // Set the responses from API or empty array if none found
+            setThemes(themes);
+        } catch (err) {
+            console.error('Error fetching responses:', err);
+        
+        } finally {
+        }
+    };
+
   const fetchResponses = async () => {
     setLoading(true);
     setError(null);
-    
     try {      
-      const response = await fetch(`${API_BASE_URL}/questionnaires/${questionnaireId}/responses`);
+      const response = await fetch(`${API_BASE_URL}/questionnaires/${questionnaire.id}/responses`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -89,14 +114,15 @@ export default function ResponsesViewer({
   };
 
   const viewResponseDetails = async (questionnaireResponse: QuestionnaireResponse) => {
+
+    questionnaireResponse.responseData = JSON.parse(questionnaireResponse.serializedResponseData!);
     setSelectedResponse(questionnaireResponse);
     setShowDetails(true);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'submitted': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
+      case 'completed': return 'bg-green-100 text-green-800';
       case 'draft': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -105,16 +131,14 @@ export default function ResponsesViewer({
   const getStatusText = (status: string) => {
     if (language === 'el') {
       switch (status) {
-        case 'submitted': return 'Υποβληθείσα';
-        case 'in_progress': return 'Σε εξέλιξη';
-        case 'draft': return 'Προσχέδιο';
+        case 'completed': return 'Υποβληθέν';
+        case 'draft': return 'Σε διενέργεια';
         default: return status;
       }
     } else {
       switch (status) {
-        case 'submitted': return 'Submitted';
-        case 'in_progress': return 'In Progress';
-        case 'draft': return 'Draft';
+        case 'completed': return 'Completed';
+        case 'draft': return 'In Progress';
         default: return status;
       }
     }
@@ -134,15 +158,8 @@ export default function ResponsesViewer({
 
   useEffect(() => {
     fetchResponses();
-  }, [questionnaireId]);
-
-  useEffect(() => {
-    console.log('ResponsesViewer loaded with props:', {
-      questionnaireId,
-      questionnaireName,
-      language
-    });
-  }, []);
+    fetchThemes();
+  }, [questionnaire]);
 
   if (loading) {
     return (
@@ -181,7 +198,7 @@ export default function ResponsesViewer({
         <h2 className="text-xl font-semibold text-gray-900">
           {language === 'el' ? 'Απαντήσεις Ερωτηματολογίου' : 'Questionnaire Responses'}
         </h2>
-        <p className="text-sm text-gray-600 mt-1">{questionnaireName}</p>
+        <p className="text-sm text-gray-600 mt-1">{questionnaire.name}</p>
       </div>
 
       {/* Filters */}
@@ -197,9 +214,8 @@ export default function ResponsesViewer({
               className="w-full border border-gray-300 rounded-md px-3 py-2"
             >
               <option value="">{language === 'el' ? 'Όλες' : 'All'}</option>
-              <option value="submitted">{language === 'el' ? 'Υποβληθείσες' : 'Submitted'}</option>
-              <option value="in_progress">{language === 'el' ? 'Σε εξέλιξη' : 'In Progress'}</option>
-              <option value="draft">{language === 'el' ? 'Προσχέδια' : 'Drafts'}</option>
+              <option value="completed">{language === 'el' ? 'Υποβληθείσες' : 'Submitted'}</option>
+              <option value="draft">{language === 'el' ? 'Σε διενέργεια' : 'Drafts'}</option>
             </select>
           </div>
 
@@ -260,9 +276,6 @@ export default function ResponsesViewer({
                 {language === 'el' ? 'Κατάσταση' : 'Status'}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                {language === 'el' ? 'Πρόοδος' : 'Progress'}
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {language === 'el' ? 'Συνεντευκτής' : 'Interviewer'}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -310,19 +323,6 @@ export default function ResponsesViewer({
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(response.status)}`}>
                     {getStatusText(response.status)}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${response.completionPercentage}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm text-gray-600">
-                      {Math.round(response.completionPercentage)}%
-                    </span>
-                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {response.user 
@@ -412,11 +412,7 @@ export default function ResponsesViewer({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {language === 'el' ? 'Δεδομένα Απάντησης' : 'Response Data'}
                 </label>
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {JSON.stringify(JSON.parse(selectedResponse.responseData || '{}'), null, 2)}
-                  </pre>
-                </div>
+                <ThemePreview mode='desktop' questionnaire={questionnaire} questionnaireResponse={selectedResponse} theme={themes!.find(t=>t.id === questionnaire.themeId)!} />
               </div>
             </div>
           </div>

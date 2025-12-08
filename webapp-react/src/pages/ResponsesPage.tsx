@@ -19,18 +19,8 @@ export default function ResponsesPage({language='el' }:ResponsesPageProps) {
           const response = await QuestionnaireService.getQuestionnaires();
         // Map the API response to match the App component structure
           const mappedQuestionnaires = response.data.map((q: any) => ({
-            id: q.id,
-            name: q.name,
-            description: q.description,
-            category: q.category,
-            status: q.status,
-            currentResponses: q.currentResponses,
-            targetResponses: q.targetResponses,
-            completionRate: q.completionRate,
-            createdAt: q.createdAt,
-            samples: q.samples || [],
+            ...q,
             schema: q.serializedSchema ? JSON.parse(q.serializedSchema) : {display: "form", components: [] },
-            samplesCount: q.samplesCount
           }));
           
           setQuestionnaires(mappedQuestionnaires);
@@ -115,8 +105,7 @@ export default function ResponsesPage({language='el' }:ResponsesPageProps) {
         <div className="space-y-6">
           {activeTab === 'responses' && (
             <ResponsesViewer
-              questionnaireId={selectedQuestionnaire.id}
-              questionnaireName={selectedQuestionnaire.name}
+              questionnaire={selectedQuestionnaire}
               language={language}
             />
           )}

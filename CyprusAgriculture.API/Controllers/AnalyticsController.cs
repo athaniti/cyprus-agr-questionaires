@@ -36,10 +36,8 @@ namespace CyprusAgriculture.API.Controllers
                     .Select(g => new
                     {
                         TotalResponses = g.Count(),
-                        CompletedResponses = g.Count(fr => fr.Status == "submitted"),
+                        CompletedResponses = g.Count(fr => fr.Status == "completed"),
                         DraftResponses = g.Count(fr => fr.Status == "draft"),
-                        InProgressResponses = g.Count(fr => fr.Status == "in_progress"),
-                        AverageCompletion = (decimal)g.Average(fr => (double)fr.CompletionPercentage),
                         LastResponseDate = g.Max(fr => fr.UpdatedAt ?? fr.CreatedAt)
                     })
                     .FirstOrDefaultAsync();
@@ -55,8 +53,6 @@ namespace CyprusAgriculture.API.Controllers
                             TotalResponses = 0,
                             CompletedResponses = 0,
                             DraftResponses = 0,
-                            InProgressResponses = 0,
-                            AverageCompletion = 0.0m,
                             LastResponseDate = (DateTime?)null
                         }
                     });
@@ -105,11 +101,9 @@ namespace CyprusAgriculture.API.Controllers
                             {
                                 Province = g.Key,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.qr.Status == "submitted"),
-                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Completed = g.Count(x => x.qr.Status == "completed"),
                                 Draft = g.Count(x => x.qr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "completed") / g.Count() * 100 : 0
                             })
                             .OrderByDescending(x => x.SuccessRate)
                             .ToListAsync();
@@ -123,11 +117,9 @@ namespace CyprusAgriculture.API.Controllers
                                 Province = g.Key.Province,
                                 Community = g.Key.Community,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.qr.Status == "submitted"),
-                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Completed = g.Count(x => x.qr.Status == "completed"),
                                 Draft = g.Count(x => x.qr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "completed") / g.Count() * 100 : 0
                             })
                             .OrderBy(x => x.Province)
                             .ThenByDescending(x => x.SuccessRate)
@@ -141,11 +133,9 @@ namespace CyprusAgriculture.API.Controllers
                             {
                                 EconomicSize = g.Key,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.qr.Status == "submitted"),
-                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Completed = g.Count(x => x.qr.Status == "completed"),
                                 Draft = g.Count(x => x.qr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "completed") / g.Count() * 100 : 0
                             })
                             .OrderByDescending(x => x.SuccessRate)
                             .ToListAsync();
@@ -158,11 +148,9 @@ namespace CyprusAgriculture.API.Controllers
                             {
                                 FarmType = g.Key,
                                 TotalAssigned = g.Count(),
-                                Completed = g.Count(x => x.qr.Status == "submitted"),
-                                InProgress = g.Count(x => x.qr.Status == "in_progress"),
+                                Completed = g.Count(x => x.qr.Status == "completed"),
                                 Draft = g.Count(x => x.qr.Status == "draft"),
-                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "submitted") / g.Count() * 100 : 0,
-                                AverageCompletion = g.Average(x => x.qr.CompletionPercentage)
+                                SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.qr.Status == "completed") / g.Count() * 100 : 0
                             })
                             .OrderByDescending(x => x.SuccessRate)
                             .ToListAsync();
@@ -206,12 +194,10 @@ namespace CyprusAgriculture.API.Controllers
                                            InterviewerId = g.Key.UserId,
                                            InterviewerName = g.Key.InterviewerName,
                                            TotalAssigned = g.Count(),
-                                           Completed = g.Count(x => x.Status == "submitted"),
-                                           InProgress = g.Count(x => x.Status == "in_progress"),
+                                           Completed = g.Count(x => x.Status == "completed"),
                                            Draft = g.Count(x => x.Status == "draft"),
-                                           SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.Status == "submitted") / g.Count() * 100 : 0,
-                                           AverageCompletion = (double)g.Average(x => (decimal)x.CompletionPercentage),
-                                           AverageDaysToComplete = g.Where(x => x.Status == "submitted" && x.UpdatedAt != null)
+                                           SuccessRate = g.Count() > 0 ? (double)g.Count(x => x.Status == "completed") / g.Count() * 100 : 0,
+                                           AverageDaysToComplete = g.Where(x => x.Status == "completed" && x.UpdatedAt != null)
                                                                     .Select(x => (x.UpdatedAt!.Value - x.CreatedAt).TotalDays)
                                                                     .DefaultIfEmpty(0)
                                                                     .Average()
@@ -283,7 +269,7 @@ namespace CyprusAgriculture.API.Controllers
                         Date = g.Key,
                         TotalResponses = g.Count(),
                         NewResponses = g.Count(fr => fr.CreatedAt.Date == g.Key),
-                        CompletedResponses = g.Count(fr => fr.Status == "submitted"),
+                        CompletedResponses = g.Count(fr => fr.Status == "completed"),
                         UpdatedResponses = g.Count(fr => fr.UpdatedAt != null && fr.UpdatedAt.Value.Date == g.Key)
                     })
                     .OrderBy(x => x.Date)

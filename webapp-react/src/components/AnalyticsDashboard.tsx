@@ -14,7 +14,6 @@ interface SuccessRate {
   inProgress: number;
   draft: number;
   successRate: number;
-  averageCompletion: number;
 }
 
 interface InterviewerPerformance {
@@ -25,7 +24,6 @@ interface InterviewerPerformance {
   inProgress: number;
   draft: number;
   successRate: number;
-  averageCompletion: number;
   averageDaysToComplete: number;
 }
 
@@ -41,8 +39,6 @@ interface QuestionnaireSummary {
   totalResponses: number;
   completedResponses: number;
   draftResponses: number;
-  inProgressResponses: number;
-  averageCompletion: number;
   lastResponseDate?: string;
 }
 
@@ -220,9 +216,8 @@ export default function AnalyticsDashboard({
   }
 
   const pieChartData = summary ? [
-    { name: language === 'el' ? 'Ολοκληρωμένες' : 'Completed', value: summary.completedResponses, color: '#00C49F' },
-    { name: language === 'el' ? 'Σε εξέλιξη' : 'In Progress', value: summary.inProgressResponses, color: '#FFBB28' },
-    { name: language === 'el' ? 'Προσχέδια' : 'Drafts', value: summary.draftResponses, color: '#FF8042' }
+    { name: language === 'el' ? 'Υποβληθέντα' : 'Completed', value: summary.completedResponses, color: '#00C49F' },
+    { name: language === 'el' ? 'Σε διενέργεια' : 'In Progress', value: summary.draftResponses, color: '#FF8042' }
   ] : [];
 
   return (
@@ -296,9 +291,7 @@ export default function AnalyticsDashboard({
                 <p className="text-sm font-medium text-gray-600">
                   {language === 'el' ? 'Μέση Πρόοδος' : 'Average Progress'}
                 </p>
-                <p className="text-2xl font-semibold text-purple-600">
-                  {Math.round(summary.averageCompletion)}%
-                </p>
+                
               </div>
               <div className="p-3 bg-purple-100 rounded-full">
                 <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -430,9 +423,7 @@ export default function AnalyticsDashboard({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {language === 'el' ? 'Ποσοστό Επιτυχίας' : 'Success Rate'}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {language === 'el' ? 'Μέση Πρόοδος' : 'Avg. Progress'}
-                  </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -460,9 +451,7 @@ export default function AnalyticsDashboard({
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {Math.round(performance.averageCompletion)}%
-                    </td>
+                    
                   </tr>
                 ))}
               </tbody>

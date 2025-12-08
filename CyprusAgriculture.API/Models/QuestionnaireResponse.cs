@@ -23,7 +23,7 @@ namespace CyprusAgriculture.API.Models
 
         [Required]
         [MaxLength(20)]
-        public string Status { get; set; } = "draft"; // draft, submitted
+        public string Status { get; set; } = "draft"; // draft, completed
 
         [Column("completion_percentage")]
         public decimal CompletionPercentage { get; set; } = 0;

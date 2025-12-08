@@ -1,6 +1,7 @@
 import { Form } from "@formio/react";
 import '@formio/js/dist/formio.full.min.css';
 import { Questionnaire } from "@/services/questionnaireService";
+import { QuestionnaireResponse } from "./ResponsesViewer";
 
 export interface Theme {
   id: string;
@@ -21,7 +22,7 @@ export interface Theme {
   isDefault?: boolean;
 }
 
-export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mode: 'mobile'|'desktop', questionnaire? : Questionnaire|undefined }) => (
+export const ThemePreview = ({ theme, mode, questionnaire, questionnaireResponse }: { theme: Theme, mode: 'mobile'|'desktop', questionnaire? : Questionnaire|undefined, questionnaireResponse?: QuestionnaireResponse|undefined }) => (
     <>
     <div className={`border rounded-lg overflow-hidden mx-auto mt-4 ${
                 mode === 'mobile' ? 'w-96' : 'w-full'
@@ -71,7 +72,8 @@ export const ThemePreview = ({ theme, mode, questionnaire }: { theme: Theme, mod
                         {questionnaire ? (questionnaire.description ?? 'Χωρίς περιγραφή') : 'Δοκιμαστική έρευνα'}
                       </div>
 
-                      {(questionnaire && questionnaire.schema && questionnaire.schema.components && questionnaire.schema.components.length) ?  <Form src="" form={questionnaire.schema}/> : 
+                      {(questionnaire && questionnaire.schema && questionnaire.schema.components && questionnaire.schema.components.length) ?  
+                        <Form src="" form={questionnaire.schema} submission={{data:questionnaireResponse?.responseData}}/> : 
                         <>
                             <div className="grid gap-4">
                                 <div>
