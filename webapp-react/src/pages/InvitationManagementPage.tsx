@@ -13,16 +13,16 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Switch } from './ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Switch } from '../components/ui/switch';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
 interface InvitationBatch {
@@ -60,7 +60,7 @@ interface Questionnaire {
   status: string;
 }
 
-const InvitationManagement: React.FC = () => {
+const InvitationManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('batches');
   const [batches, setBatches] = useState<InvitationBatch[]>([]);
   const [templates, setTemplates] = useState<InvitationTemplate[]>([]);
@@ -825,4 +825,4 @@ const InvitationManagement: React.FC = () => {
   );
 };
 
-export default InvitationManagement;
+export default InvitationManagementPage;

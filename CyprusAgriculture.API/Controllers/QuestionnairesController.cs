@@ -23,19 +23,21 @@ namespace CyprusAgriculture.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaires(
             [FromQuery] string? status = null,
+            [FromQuery] string? userId = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 100)
         {
             try
             {
-                _logger.LogInformation("GetQuestionnaires called with status={Status}, page={Page}, pageSize={PageSize}", 
-                    status, page, pageSize);
-                
                 var query = _context.Questionnaires.AsQueryable();
 
                 if (!string.IsNullOrEmpty(status))
                 {
                     query = query.Where(q => q.Status == status);
+                }
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    query = query.Where(q => q.Samples.Any(s=>s.SampleGroups.Any(sg=>sg.InterviewerId == Guid.Parse(userId))));
                 }
 
 
@@ -289,7 +291,41 @@ namespace CyprusAgriculture.API.Controllers
                 return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
+
+        [HttpGet("{id}/sample-groups")]
+        public async Task<ActionResult<IEnumerable<object>>> GetQuestionnaireSampleGroups(Guid id, [FromQuery] string? userId = null)
+        {
+            var questionnaire = await _context.Questionnaires.FindAsync(id);
+            if (questionnaire == null)
+            {
+                return NotFound(new { success = false, message = "Questionnaire not found" });
+            }
+
+            var groups = await _context.SampleGroups
+                    .Where(sg => sg.Sample.QuestionnaireId == id && (userId == null || sg.InterviewerId == Guid.Parse(userId)))
+                    .Include(sg => sg.Interviewer)
+                    .Select(sg => new
+                    {
+                        sg.Id,
+                        sg.Name,
+                        sg.SampleId,
+                        SampleName=sg.Sample!.Name,
+                        sg.Sample!.QuestionnaireId,
+                        QuestionnaireName=sg.Sample!.Questionnaire!.Name,
+                        sg.Description,
+                        SerializedCritera = sg.Criteria,
+                        SerializedFarmIds = sg.FarmIds,
+                        sg.CreatedAt,
+                        sg.InterviewerId
+                    })
+                    .OrderBy(sg=>sg.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(groups);
+        }
     }
+
+
 
     // DTOs
     public class CreateOrUpdateQuestionnaireRequest

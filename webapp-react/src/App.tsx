@@ -8,7 +8,7 @@ import { Dashboard } from './components/Dashboard';
 import { UserManagement } from './components/UserManagement';
 import { SampleManagementPage } from './pages/SampleManagementPage';
 import { ThemesPage } from './pages/ThemesPage';
-import InvitationManagement from './components/InvitationManagement';
+import InvitationManagementPage from './pages/InvitationManagementPage';
 import LocationManagementHub from './components/LocationManagementHub';
 import QuotaManagement from './components/QuotaManagement';
 import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
@@ -41,7 +41,7 @@ function AppContent() {
         case 'samples':
           return <SampleManagementPage />;
         case 'invitations':
-          return <InvitationManagement />;
+          return <InvitationManagementPage />;
         case 'locations':
           return <LocationManagementHub />;
         case 'quotas':

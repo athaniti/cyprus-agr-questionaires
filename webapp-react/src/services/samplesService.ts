@@ -51,6 +51,10 @@ export interface Farm {
 export interface SampleGroup {
   id: string;
   name: string;
+  sampleId: string;
+  sampleName:string;
+  questionnaireId: string;
+  questionnaireName:string;
   description?: string;
   serizedCriteria?: string;
   criteria?: any;

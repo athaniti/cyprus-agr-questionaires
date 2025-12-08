@@ -278,7 +278,7 @@ namespace CyprusAgriculture.API.Controllers
 
         
         [HttpGet("{sampleId}/sample-groups")]
-        public async Task<ActionResult<IEnumerable<object>>> GetSampleGroups(Guid sampleId)
+        public async Task<ActionResult<IEnumerable<object>>> GetSampleGroups(Guid sampleId, [FromQuery] string? userId = null)
         {
             var sample = await _context.Samples.FindAsync(sampleId);
             if (sample == null)
@@ -287,12 +287,16 @@ namespace CyprusAgriculture.API.Controllers
             }
 
             var groups = await _context.SampleGroups
-                    .Where(sg => sg.SampleId == sampleId)
+                    .Where(sg => sg.SampleId == sampleId && (userId == null || sg.InterviewerId == Guid.Parse(userId)))
                     .Include(sg => sg.Interviewer)
                     .Select(sg => new
                     {
                         sg.Id,
                         sg.Name,
+                        sg.SampleId,
+                        SampleName=sg.Sample!.Name,
+                        sg.Sample!.QuestionnaireId,
+                        QuestionnaireName=sg.Sample!.Questionnaire!.Name,
                         sg.Description,
                         SerializedCritera = sg.Criteria,
                         SerializedFarmIds = sg.FarmIds,
@@ -303,7 +307,6 @@ namespace CyprusAgriculture.API.Controllers
                     .ToListAsync();
 
                 return Ok(groups);
-
         }
 
         [HttpPost("{sampleId}/sample-groups")]
@@ -336,6 +339,10 @@ namespace CyprusAgriculture.API.Controllers
                     {
                         sampleGroup.Id,
                         sampleGroup.Name,
+                        sampleGroup.SampleId,
+                        SampleName=sampleGroup.Sample!.Name,
+                        sampleGroup.Sample!.QuestionnaireId,
+                        QuestionnaireName=sampleGroup.Sample!.Questionnaire!.Name,
                         sampleGroup.Description,
                         SerializedCritera = sampleGroup.Criteria,
                         SerializedFarmIds = sampleGroup.FarmIds,
@@ -372,7 +379,20 @@ namespace CyprusAgriculture.API.Controllers
                 sampleGroup.FarmIds = request.SerializedFarmIds;
                 
                 await _context.SaveChangesAsync();
-                return Ok(sampleGroup);
+                return Ok(new
+                    {
+                        sampleGroup.Id,
+                        sampleGroup.Name,
+                        sampleGroup.SampleId,
+                        SampleName=sampleGroup.Sample!.Name,
+                        sampleGroup.Sample!.QuestionnaireId,
+                        QuestionnaireName=sampleGroup.Sample!.Questionnaire!.Name,
+                        sampleGroup.Description,
+                        SerializedCritera = sampleGroup.Criteria,
+                        SerializedFarmIds = sampleGroup.FarmIds,
+                        sampleGroup.CreatedAt,
+                        sampleGroup.InterviewerId
+                    });
             }
             catch (Exception ex)
             {

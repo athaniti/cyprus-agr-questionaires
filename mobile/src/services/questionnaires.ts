@@ -33,12 +33,20 @@ export interface Questionnaire {
   responsesCount:number;
 }
 
-export interface Sample {
+export interface SampleGroup {
   id: string;
   name: string;
-  targetSize: number;
-  status: string;
-  createdAt: string;
+  sampleId: string;
+  sampleName:string;
+  questionnaireId: string;
+  questionnaireName:string;
+  description?: string;
+  serizedCriteria?: string;
+  criteria?: any;
+  serializedFarmIds?:string;
+  farmIds?: string[];
+  createdAt: Date;
+  interviewerId?: string;
 }
 
 export interface QuestionnaireResponse {
@@ -54,6 +62,21 @@ export interface QuestionnaireResponse {
   email: string;
 }
 
+export interface Farm {
+  id: string;
+  farmCode: string;
+  ownerName: string;
+  province: string;
+  community: string;
+  farmType: string;
+  totalArea: number;
+  economicSize?: string;
+  mainCrop?: string;
+  livestockType?: string;
+  legalStatus?: string;
+  status?: string;
+  createdAt?: string;
+}
 
 
 export interface Quota {
@@ -73,14 +96,14 @@ class QuestionnairesService {
   // Get all questionnaires with pagination and filters
   async getQuestionnaires(params?: {
     status?: string;
-    category?: string;
+    userId?: string;
     page?: number;
     pageSize?: number;
   }): Promise<PaginatedResponse<Questionnaire>> {
     const searchParams = new URLSearchParams();
     
     if (params?.status) searchParams.append('status', params.status);
-    if (params?.category) searchParams.append('category', params.category);
+    if (params?.userId) searchParams.append('userId', params.userId);
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString());
 
@@ -89,6 +112,7 @@ class QuestionnairesService {
     
     return apiService.get<PaginatedResponse<Questionnaire>>(endpoint);
   }
+ 
 
   // Get questionnaire by ID
   async getQuestionnaire(id: string): Promise<Questionnaire> {
@@ -100,8 +124,23 @@ class QuestionnairesService {
     return apiService.get<QuestionnaireResponse[]>(`/questionnaires/${id}/responses`);
   }
 
+  async getSamplrGroups(id: string, params?: {
+    userId?: string;
+  }): Promise<SampleGroup[]> {
+    const searchParams = new URLSearchParams();
+    
+    if (params?.userId) searchParams.append('userId', params.userId);
 
+    const queryString = searchParams.toString();
+    const endpoint = `/questionnaires/${id}/sample-groups${queryString ? `?${queryString}` : ''}`;
+    
+    return apiService.get<SampleGroup[]>(endpoint);
+  }
 
+  async getSampleParticipants(sampleId: string): Promise<Farm[]> {
+    const endpoint = `/samples/${sampleId}/participants`;
+    return apiService.get<Farm[]>(endpoint);
+  }
 }
 
 export const questionnaireService = new QuestionnairesService();

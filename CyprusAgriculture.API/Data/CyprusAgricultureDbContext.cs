@@ -158,6 +158,11 @@ namespace CyprusAgriculture.API.Data
                 entity.Property(s => s.CreatedBy).HasColumnName("created_by").IsRequired();
                 entity.Property(s => s.CreatedAt).HasColumnName("created_at");
                 entity.Property(s => s.UpdatedAt).HasColumnName("updated_at");
+
+                entity.HasOne(s => s.Questionnaire)
+                    .WithMany(q => q.Samples)
+                    .HasForeignKey(sp => sp.QuestionnaireId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configure SampleParticipant entity
@@ -201,6 +206,11 @@ namespace CyprusAgriculture.API.Data
 
                 entity.HasIndex(sg => sg.SampleId);
                 entity.HasIndex(sg => sg.InterviewerId);
+
+                entity.HasOne(sg => sg.Sample)
+                    .WithMany(s => s.SampleGroups)
+                    .HasForeignKey(sg => sg.SampleId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Configure Invitation entity

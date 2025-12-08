@@ -46,12 +46,13 @@ namespace CyprusAgriculture.API.Models
 
         // Navigation properties
         [ForeignKey("SampleId")]
-        public virtual Sample? Sample { get; set; }
+        public virtual Sample Sample { get; set; }
 
         [ForeignKey("InterviewerId")]
         public virtual User? Interviewer { get; set; }
 
         [ForeignKey("CreatedBy")]
         public virtual User? CreatedByUser { get; set; }
+
     }
 }

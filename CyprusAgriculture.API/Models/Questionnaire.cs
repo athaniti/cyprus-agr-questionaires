@@ -41,6 +41,7 @@ namespace CyprusAgriculture.API.Models
         public virtual Theme? Theme { get; set; }
 
         public virtual ICollection<QuestionnaireResponse> Responses { get; set; } = new List<QuestionnaireResponse>();
+        public virtual ICollection<Sample> Samples { get; set; } = new List<Sample>();
         public virtual ICollection<QuestionnaireInvitation> Invitations { get; set; } = new List<QuestionnaireInvitation>();
         public virtual ICollection<QuestionnaireQuota> Quotas { get; set; } = new List<QuestionnaireQuota>();
     }
