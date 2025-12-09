@@ -1,102 +1,117 @@
+import { Questionnaire, QuestionnaireService } from '@/services/questionnaireService';
 import React, { useState, useEffect } from 'react';
 
-interface QuotaVariable {
+export interface QuotaVariable {
   id: string;
   name: string;
-  displayName: string;
-  description?: string;
-  variableType: string;
-  dataType: string;
-  possibleValues: QuotaVariableValue[];
-  isActive: boolean;
-  sortOrder: number;
-}
-
-interface QuotaVariableValue {
-  value: string;
-  label: string;
-  description?: string;
-  isActive: boolean;
-}
-
-interface QuotaCriterion {
-  variableName: string;
-  displayName: string;
-  operator: string;
   values: string[];
-  variableType: string;
 }
 
-interface QuotaCriteria {
-  criteria: QuotaCriterion[];
-  logic: string;
+
+export interface QuotaCriterion {
+  quotaVariableId: string;
+  quotaVariableValue: string;
 }
 
-interface Quota {
+export interface Quota {
   id: string;
   name: string;
   description?: string;
   questionnaireId: string;
   questionnaireName: string;
-  criteria: QuotaCriteria;
+  serializedCriteria?:string;
+  criteria: QuotaCriterion[];
   targetCount: number;
-  completedCount: number;
-  inProgressCount: number;
-  pendingCount: number;
-  remainingCount: number;
-  completionPercentage: number;
-  status: string;
-  isActive: boolean;
-  autoStop: boolean;
-  priority: number;
-  createdAt: string;
-  updatedAt?: string;
-  createdBy: string;
-  updatedBy?: string;
+  totalCompleted?:number;
+  totalResponses?:number;
 }
 
-interface QuotaManagementProps {
-  questionnaireId?: string;
-}
 
-const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) => {
+export const quotaVariables : QuotaVariable[]= [
+      {id:'farmType', name:"Είδος παραγωγής", values:[
+      'Φυτική Παραγωγή',
+      'Ζωική Παραγωγή', 
+      'Μικτή Εκμετάλλευση',
+      'Κηπευτικά',
+      'Οπωροφόρα',
+      'Αμπελώνες',
+      'Ελαιώνες'
+    ]}, {id:'sizeCategory', name:"Μέγεθος (έκταση)", values:[
+      'Πολύ Μικρή (0-5 στρέμματα)',
+      'Μικρή (5-20 στρέμματα)',
+      'Μεσαία (20-100 στρέμματα)',
+      'Μεγάλη (100-500 στρέμματα)',
+      'Πολύ Μεγάλη (>500 στρέμματα)'
+    ]}, {id:'economicSize', name:"Οικονομικό μέγεθος", values:[
+      'Πολύ Μικρό (0-8.000€)',
+      'Μικρό (8.000-25.000€)',
+      'Μεσαίο (25.000-100.000€)',
+      'Μεγάλο (100.000-500.000€)',
+      'Πολύ Μεγάλο (>500.000€)'
+    ]}, {id:'legalStatus', name:"Νομική υπόσταση", values:[
+      'Φυσικό Πρόσωπο',
+      'Εταιρεία',
+      'Συνεταιρισμός',
+      'Οικογενειακή Επιχείρηση'
+    ]}, {id:'system', name:"Παραγωγικό σύστημα", values:[
+      'Συμβατική καλλιέργεια',
+      'Βιολογική παραγωγή',
+      'Ολοκληρωμένη διαχείριση',
+      'Προστατευμένη καλλιέργεια (θερμοκήπια)'
+    ]}
+  ];
+const QuotaManagementPage: React.FC = () => {
+  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
   const [quotas, setQuotas] = useState<Quota[]>([]);
-  const [quotaVariables, setQuotaVariables] = useState<QuotaVariable[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [monitoringMode, setMonitoringMode] = useState(false);
+  const [selectedQuota, setSelectedQuota] = useState<Quota|null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    questionnaireId: questionnaireId || '',
-    criteria: { criteria: [], logic: 'AND' } as QuotaCriteria,
-    targetCount: 100,
-    isActive: true,
-    autoStop: true,
-    priority: 0
-  });
+
+
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return 'Ολοκληρώθηκε';
+      case 'in_progress': return 'Σε εξέλιξη';
+      case 'not_started': return 'Δεν ξεκίνησε';
+      default: return status;
+    }
+  };
+
 
   const API_BASE_URL = 'http://localhost:5050/api';
 
   useEffect(() => {
     loadQuotas();
-    loadQuotaVariables();
-  }, [questionnaireId]);
+    fetchQuestionnaires();
+  }, []);
+
+  const fetchQuestionnaires = async () => {
+      var questionnaires = await QuestionnaireService.getQuestionnaires();
+      setQuestionnaires(questionnaires.data);
+  };
 
   const loadQuotas = async () => {
     setLoading(true);
     try {
-      const url = questionnaireId 
-        ? `${API_BASE_URL}/Quotas?questionnaireId=${questionnaireId}`
-        : `${API_BASE_URL}/Quotas`;
+      const url = `${API_BASE_URL}/Quotas`;
       
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setQuotas(data);
+        setQuotas(data.map((q:Quota) => {
+          q.criteria = JSON.parse(q.serializedCriteria!);
+          return q;
+        }));
       } else {
         setError('Αποτυχία φόρτωσης quotas');
       }
@@ -108,37 +123,20 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
     }
   };
 
-  const loadQuotaVariables = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/Quotas/variables`);
-      if (response.ok) {
-        const data = await response.json();
-        setQuotaVariables(data);
-      } else {
-        console.error('Failed to load quota variables');
-      }
-    } catch (error) {
-      console.error('Error loading quota variables:', error);
-    }
-  };
-
   const handleCreateQuota = async () => {
     try {
+      selectedQuota!.serializedCriteria = JSON.stringify(selectedQuota!.criteria!);
       const response = await fetch(`${API_BASE_URL}/Quotas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          createdBy: 'current-user' // TODO: Get from auth context
-        }),
+        body: JSON.stringify(selectedQuota),
       });
 
       if (response.ok) {
         await loadQuotas();
-        setShowCreateForm(false);
-        resetForm();
+        setSelectedQuota(null);
       } else {
         setError('Αποτυχία δημιουργίας quota');
       }
@@ -148,20 +146,19 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
     }
   };
 
-  const handleUpdateQuota = async (quotaId: string, updates: any) => {
+  const handleUpdateQuota = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/Quotas/${quotaId}`, {
+      selectedQuota!.serializedCriteria = JSON.stringify(selectedQuota!.criteria!);
+      const response = await fetch(`${API_BASE_URL}/Quotas/${selectedQuota!.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...updates,
-          updatedBy: 'current-user' // TODO: Get from auth context
-        }),
+        body: JSON.stringify(selectedQuota),
       });
 
       if (response.ok) {
+        setSelectedQuota(null)
         await loadQuotas();
       } else {
         setError('Αποτυχία ενημέρωσης quota');
@@ -193,66 +190,31 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      questionnaireId: questionnaireId || '',
-      criteria: { criteria: [], logic: 'AND' },
-      targetCount: 100,
-      isActive: true,
-      autoStop: true,
-      priority: 0
+  
+
+  const addCriterion = () => {
+    setSelectedQuota({
+      ...selectedQuota!,
+      criteria:[...selectedQuota!.criteria, {quotaVariableId:quotaVariables[0].id, quotaVariableValue:quotaVariables[0].values[0]} as QuotaCriterion]
     });
   };
 
-  const addCriterion = () => {
-    const newCriterion: QuotaCriterion = {
-      variableName: '',
-      displayName: '',
-      operator: 'equals',
-      values: [],
-      variableType: ''
-    };
-
-    setFormData(prev => ({
-      ...prev,
-      criteria: {
-        ...prev.criteria,
-        criteria: [...prev.criteria.criteria, newCriterion]
-      }
-    }));
-  };
-
-  const updateCriterion = (index: number, updates: Partial<QuotaCriterion>) => {
-    setFormData(prev => ({
-      ...prev,
-      criteria: {
-        ...prev.criteria,
-        criteria: prev.criteria.criteria.map((criterion, i) => 
-          i === index ? { ...criterion, ...updates } : criterion
-        )
-      }
-    }));
+  const updateCriterion = (index: number, updatedCriterion: QuotaCriterion) => {
+    setSelectedQuota({
+      ...selectedQuota!,
+      criteria:selectedQuota!.criteria.map((c,i)=> {
+        if (i!== index) return c;
+        return updatedCriterion
+      })
+    });
+    
   };
 
   const removeCriterion = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      criteria: {
-        ...prev.criteria,
-        criteria: prev.criteria.criteria.filter((_, i) => i !== index)
-      }
-    }));
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Completed': return 'text-green-600 bg-green-100';
-      case 'Near Completion': return 'text-yellow-600 bg-yellow-100';
-      case 'Active': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
+    setSelectedQuota({
+      ...selectedQuota!,
+      criteria:selectedQuota!.criteria.filter((c,i)=> i !== index)
+    });
   };
 
   const renderCriteriaForm = () => (
@@ -267,7 +229,7 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
         </button>
       </div>
 
-      {formData.criteria.criteria.map((criterion, index) => (
+      {selectedQuota!.criteria.map((criterion, index) => (
         <div key={index} className="border rounded-lg p-4 space-y-3">
           <div className="flex justify-between items-center">
             <h5 className="font-medium">Κριτήριο {index + 1}</h5>
@@ -285,21 +247,17 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                 Μεταβλητή
               </label>
               <select
-                value={criterion.variableName}
+                value={criterion.quotaVariableId}
                 onChange={(e) => {
-                  const variable = quotaVariables.find(v => v.name === e.target.value);
                   updateCriterion(index, {
-                    variableName: e.target.value,
-                    displayName: variable?.displayName || '',
-                    variableType: variable?.variableType || ''
+                    ...criterion, quotaVariableId:e.target.value, quotaVariableValue:quotaVariables.find(qv=>qv.id === e.target.value)!.values[0]
                   });
                 }}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
-                <option value="">Επιλέξτε μεταβλητή</option>
                 {quotaVariables.map(variable => (
-                  <option key={variable.id} value={variable.name}>
-                    {variable.displayName}
+                  <option key={variable.id} value={variable.id}>
+                    {variable.name}
                   </option>
                 ))}
               </select>
@@ -307,69 +265,25 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Τελεστής
+                Τιμή
               </label>
               <select
-                value={criterion.operator}
-                onChange={(e) => updateCriterion(index, { operator: e.target.value })}
+                value={criterion.quotaVariableValue}
+                onChange={(e) => updateCriterion(index, {
+                  ...criterion, quotaVariableValue:e.target.value
+                })}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
-                <option value="equals">Ίσο με</option>
-                <option value="in">Περιέχεται σε</option>
-                <option value="between">Μεταξύ</option>
-                <option value="contains">Περιέχει</option>
+                {(quotaVariables.find(qv=>qv.id === criterion.quotaVariableId) ?? {values:[]}).values.map(quotaVariableValue => (
+                  <option key={quotaVariableValue} value={quotaVariableValue}>
+                    {quotaVariableValue}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
-
-          {criterion.variableName && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Τιμές
-              </label>
-              <div className="space-y-2">
-                {quotaVariables
-                  .find(v => v.name === criterion.variableName)
-                  ?.possibleValues.map(value => (
-                    <label key={value.value} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={criterion.values.includes(value.value)}
-                        onChange={(e) => {
-                          const newValues = e.target.checked
-                            ? [...criterion.values, value.value]
-                            : criterion.values.filter(v => v !== value.value);
-                          updateCriterion(index, { values: newValues });
-                        }}
-                        className="mr-2"
-                      />
-                      {value.label}
-                    </label>
-                  ))}
-              </div>
-            </div>
-          )}
         </div>
       ))}
-
-      {formData.criteria.criteria.length > 1 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Λογική Σύνδεσης
-          </label>
-          <select
-            value={formData.criteria.logic}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              criteria: { ...prev.criteria, logic: e.target.value }
-            }))}
-            className="w-full p-2 border border-gray-300 rounded-md"
-          >
-            <option value="AND">ΚΑΙ (AND) - Όλα τα κριτήρια</option>
-            <option value="OR">Ή (OR) - Οποιοδήποτε κριτήριο</option>
-          </select>
-        </div>
-      )}
     </div>
   );
 
@@ -395,17 +309,7 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
         </div>
         <div className="flex space-x-2">
           <button
-            onClick={() => setMonitoringMode(!monitoringMode)}
-            className={`px-4 py-2 rounded-md ${
-              monitoringMode
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {monitoringMode ? 'Λειτουργία Παρακολούθησης' : 'Λειτουργία Διαχείρισης'}
-          </button>
-          <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => setSelectedQuota({criteria:[]} as unknown as Quota)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Νέο Quota
@@ -421,15 +325,14 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
       )}
 
       {/* Create/Edit Form Modal */}
-      {showCreateForm && (
+      {selectedQuota && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-screen overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Δημιουργία Νέου Quota</h2>
+              <h2 className="text-xl font-bold">Επεξεργασία Quota</h2>
               <button
                 onClick={() => {
-                  setShowCreateForm(false);
-                  resetForm();
+                  setSelectedQuota(null);
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -441,12 +344,32 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ερωτηματολόγιο
+                  </label>
+                  <select
+                      value={selectedQuota.questionnaireId}
+                      onChange={(e) => {
+                        setSelectedQuota({...selectedQuota, questionnaireId:e.target.value})
+                      }}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                      {questionnaires.map(questionnaire => (
+                        <option key={questionnaire.id} value={questionnaire.id}>
+                          {questionnaire.name}
+                        </option>
+                      ))}
+                    </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Όνομα Quota *
                   </label>
                   <input
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    value={selectedQuota.name}
+                    onChange={(e) => setSelectedQuota({ ...selectedQuota, name: e.target.value })}
                     className="w-full p-2 border border-gray-300 rounded-md"
                     placeholder="π.χ. Μικρές Εκμεταλλεύσεις Λευκωσίας"
                   />
@@ -458,8 +381,8 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                   </label>
                   <input
                     type="number"
-                    value={formData.targetCount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, targetCount: parseInt(e.target.value) || 0 }))}
+                    value={selectedQuota.targetCount}
+                    onChange={(e) => setSelectedQuota({ ...selectedQuota, targetCount: parseInt(e.target.value) })}
                     className="w-full p-2 border border-gray-300 rounded-md"
                     min="1"
                   />
@@ -471,8 +394,8 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                   Περιγραφή
                 </label>
                 <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  value={selectedQuota.description}
+                  onChange={(e) => setSelectedQuota({ ...selectedQuota, description: e.target.value })}
                   className="w-full p-2 border border-gray-300 rounded-md"
                   rows={3}
                   placeholder="Περιγραφή του quota και των κριτηρίων του"
@@ -481,61 +404,24 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
 
               {renderCriteriaForm()}
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Προτεραιότητα
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.priority}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 0 }))}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    min="0"
-                  />
-                </div>
-
-                <div className="flex items-center">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                      className="mr-2"
-                    />
-                    Ενεργό
-                  </label>
-                </div>
-
-                <div className="flex items-center">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.autoStop}
-                      onChange={(e) => setFormData(prev => ({ ...prev, autoStop: e.target.checked }))}
-                      className="mr-2"
-                    />
-                    Αυτόματη Διακοπή
-                  </label>
-                </div>
-              </div>
 
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   onClick={() => {
-                    setShowCreateForm(false);
-                    resetForm();
+                    setSelectedQuota(null);
                   }}
                   className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
                 >
                   Ακύρωση
                 </button>
                 <button
-                  onClick={handleCreateQuota}
-                  disabled={!formData.name || formData.targetCount <= 0}
+                  onClick={()=>{ 
+                    if (selectedQuota.id) handleUpdateQuota();
+                    else handleCreateQuota()}}
+                  disabled={!selectedQuota.questionnaireId || !selectedQuota.name || selectedQuota.targetCount <= 0 || !selectedQuota.criteria.length}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                 >
-                  Δημιουργία
+                  Αποθήκευση
                 </button>
               </div>
             </div>
@@ -553,28 +439,25 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                   Quota
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Κριτήρια
+                  Κριτηρια
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Στόχος
+                  Στοχος
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ολοκληρωμένα
+                  Ολοκληρωμενα
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Σε Εξέλιξη
+                  Εκκρεμη
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Εκκρεμή
+                  Προοδος
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Πρόοδος
+                  Κατασταση
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Κατάσταση
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ενέργειες
+                  Ενςργειες
                 </th>
               </tr>
             </thead>
@@ -583,8 +466,13 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                 <tr key={quota.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900" onClick={()=>{
+                        setSelectedQuota(quota);
+                      }}>
                         {quota.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {quota.questionnaireName}
                       </div>
                       <div className="text-sm text-gray-500">
                         {quota.description}
@@ -593,11 +481,10 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900">
-                      {quota.criteria.criteria.map((criterion, index) => (
+                      {quota.criteria.map((criterion, index) => (
                         <div key={index} className="mb-1">
-                          <span className="font-medium">{criterion.displayName}</span>
-                          <span className="text-gray-500"> {criterion.operator} </span>
-                          <span>{criterion.values.join(', ')}</span>
+                          <span className="font-medium">{quotaVariables.find(qv=>qv.id === criterion.quotaVariableId)?.name }</span>
+                          <span className="text-gray-500"> {criterion.quotaVariableValue} </span>
                         </div>
                       ))}
                     </div>
@@ -606,44 +493,31 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
                     {quota.targetCount}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {quota.completedCount}
+                    {quota.totalCompleted ?? 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {quota.inProgressCount}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {quota.pendingCount}
+                    {quota.targetCount - (quota.totalCompleted ?? 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${Math.min(quota.completionPercentage, 100)}%` }}
+                          style={{ width: `${(100*(quota.totalCompleted ?? 0)/quota.targetCount).toFixed(0)}%` }}
                         ></div>
                       </div>
                       <span className="text-sm text-gray-900">
-                        {quota.completionPercentage.toFixed(1)}%
+                        {(100*(quota.totalCompleted ?? 0)/quota.targetCount).toFixed(0)}%
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(quota.status)}`}>
-                      {quota.status}
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(!quota.totalCompleted ? "not_started": (quota.totalCompleted>=quota.targetCount) ?'completed':'in_progress')}`}>
+                      {getStatusLabel(!quota.totalCompleted ? "not_started": (quota.totalCompleted>=quota.targetCount) ?'completed':'in_progress') }
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleUpdateQuota(quota.id, { isActive: !quota.isActive })}
-                        className={`px-2 py-1 text-xs rounded ${
-                          quota.isActive
-                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
-                        }`}
-                      >
-                        {quota.isActive ? 'Απενεργοποίηση' : 'Ενεργοποίηση'}
-                      </button>
                       <button
                         onClick={() => handleDeleteQuota(quota.id)}
                         className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
@@ -668,4 +542,4 @@ const QuotaManagement: React.FC<QuotaManagementProps> = ({ questionnaireId }) =>
   );
 };
 
-export default QuotaManagement;
+export default QuotaManagementPage;

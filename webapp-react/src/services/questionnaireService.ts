@@ -1,3 +1,5 @@
+import { Farm, SampleGroup } from "./samplesService";
+
 const API_BASE_URL = 'http://localhost:5050/api';
 
 export interface Questionnaire {
@@ -23,8 +25,8 @@ export interface InvitationBatch {
   questionnaireName: string;
   serializedFarmIds?:string;
   recipientFarmIds?:any[];
-  sentAt?:Date;
-  scheduledAt?:Date;
+  sentAt?:string;
+  scheduledAt?:string;
 }
 
 export interface InvitationTemplate {
@@ -117,6 +119,30 @@ export class QuestionnaireService {
     }
   }
 
+  static async getQuestionnaireSampleGroups(id:string): Promise<SampleGroup[]> {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/sample-groups`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  static async getQuestionnaireParticipants(id:string): Promise<Farm[]> {
+    const response = await fetch(`${API_BASE_URL}/questionnaires/${id}/participants`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
   static async getInvitationBatches(): Promise<InvitationBatch[]> {
     const response = await fetch(`${API_BASE_URL}/invitations/batches`, {
       method: 'GET',
@@ -129,7 +155,23 @@ export class QuestionnaireService {
     return await response.json();
   }
 
-  static async GetInvitationTemplates(): Promise<InvitationTemplate[]>{
+  static async createInvitationBatch(invitationBatch:InvitationBatch):Promise<InvitationBatch> {
+    const response = await fetch(`${API_BASE_URL}/invitations/batches`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(invitationBatch),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  static async getInvitationTemplates(): Promise<InvitationTemplate[]>{
     const response = await fetch(`${API_BASE_URL}/invitations/templates`, {
       method: 'GET',
     });
@@ -141,7 +183,7 @@ export class QuestionnaireService {
     return await response.json();
   }
 
-  static async CreateInvitationTemplate(template:InvitationTemplate): Promise<InvitationTemplate>{
+  static async createInvitationTemplate(template:InvitationTemplate): Promise<InvitationTemplate>{
     const response = await fetch(`${API_BASE_URL}/invitations/templates`, {
       method: 'POST',
       headers: {
@@ -157,7 +199,7 @@ export class QuestionnaireService {
     return await response.json();
   }
 
-  static async UpdateInvitationTemplate(id:string, template:InvitationTemplate): Promise<InvitationTemplate>{
+  static async updateInvitationTemplate(id:string, template:InvitationTemplate): Promise<InvitationTemplate>{
     const response = await fetch(`${API_BASE_URL}/invitations/templates/${id}`, {
       method: 'PUT',
       headers: {
@@ -173,7 +215,7 @@ export class QuestionnaireService {
     return await response.json();
   }
 
-    static async DeleteInvitationTemplate(id:string): Promise<void>{
+    static async deleteInvitationTemplate(id:string): Promise<void>{
     const response = await fetch(`${API_BASE_URL}/invitations/templates/${id}`, {
       method: 'DELETE'
     });

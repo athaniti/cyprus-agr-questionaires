@@ -22,46 +22,28 @@ namespace CyprusAgriculture.API.Controllers
 
         // GET: api/quotas
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<QuotaDto>>> GetQuotas([FromQuery] Guid? questionnaireId = null)
+        public async Task<ActionResult<IEnumerable<object>>> GetQuotas()
         {
             try
             {
-                var query = _context.Quotas
-                    .Include(q => q.QuotaResponses)
+                var query = _context.Quotas.Include(q=>q.Questionnaire).ThenInclude(q=>q.Responses)
                     .AsQueryable();
 
-                if (questionnaireId.HasValue)
-                {
-                    query = query.Where(q => q.QuestionnaireId == questionnaireId);
-                }
-
                 var quotas = await query
-                    .OrderBy(q => q.Priority)
-                    .ThenBy(q => q.CreatedAt)
+                    .OrderBy(q => q.Id)
                     .ToListAsync();
 
-                var quotaDtos = quotas.Select(quota => new QuotaDto
+                var quotaDtos = quotas.Select(quota => new 
                 {
-                    Id = quota.Id,
-                    Name = quota.Name,
-                    Description = quota.Description,
-                    QuestionnaireId = quota.QuestionnaireId,
-                    QuestionnaireName = "Unknown", // Will be populated later when we have questionnaires
-                    Criteria = JsonSerializer.Deserialize<QuotaCriteriaDto>(quota.Criteria) ?? new QuotaCriteriaDto(),
-                    TargetCount = quota.TargetCount,
-                    CompletedCount = quota.CompletedCount,
-                    InProgressCount = quota.InProgressCount,
-                    PendingCount = quota.PendingCount,
-                    RemainingCount = quota.RemainingCount,
-                    CompletionPercentage = quota.CompletionPercentage,
-                    Status = quota.Status,
-                    IsActive = quota.IsActive,
-                    AutoStop = quota.AutoStop,
-                    Priority = quota.Priority,
-                    CreatedAt = quota.CreatedAt,
-                    UpdatedAt = quota.UpdatedAt,
-                    CreatedBy = quota.CreatedBy,
-                    UpdatedBy = quota.UpdatedBy
+                    quota.Id,
+                    quota.Name,
+                    quota.Description,
+                    quota.QuestionnaireId,
+                    QuestionnaireName = quota.Questionnaire.Name,
+                    SerializedCriteria = quota.Criteria,
+                    quota.TargetCount,
+                    TotalCompleted = quota.Questionnaire.Responses.Where(r=>r.Status=="completed").Count(),
+                    TotalResponses = quota.Questionnaire.Responses.Count()
                 }).ToList();
 
                 return Ok(quotaDtos);
@@ -73,57 +55,11 @@ namespace CyprusAgriculture.API.Controllers
             }
         }
 
-        // GET: api/quotas/{id}
-        [HttpGet("{id}")]
-        public async Task<ActionResult<QuotaDto>> GetQuota(Guid id)
-        {
-            try
-            {
-                var quota = await _context.Quotas
-                    .Include(q => q.Questionnaire)
-                    .FirstOrDefaultAsync(q => q.Id == id);
-
-                if (quota == null)
-                {
-                    return NotFound();
-                }
-
-                var quotaDto = new QuotaDto
-                {
-                    Id = quota.Id,
-                    Name = quota.Name,
-                    Description = quota.Description,
-                    QuestionnaireId = quota.QuestionnaireId,
-                    QuestionnaireName = quota.Questionnaire?.Name ?? "Unknown",
-                    Criteria = JsonSerializer.Deserialize<QuotaCriteriaDto>(quota.Criteria) ?? new QuotaCriteriaDto(),
-                    TargetCount = quota.TargetCount,
-                    CompletedCount = quota.CompletedCount,
-                    InProgressCount = quota.InProgressCount,
-                    PendingCount = quota.PendingCount,
-                    RemainingCount = quota.RemainingCount,
-                    CompletionPercentage = quota.CompletionPercentage,
-                    Status = quota.Status,
-                    IsActive = quota.IsActive,
-                    AutoStop = quota.AutoStop,
-                    Priority = quota.Priority,
-                    CreatedAt = quota.CreatedAt,
-                    UpdatedAt = quota.UpdatedAt,
-                    CreatedBy = quota.CreatedBy,
-                    UpdatedBy = quota.UpdatedBy
-                };
-
-                return Ok(quotaDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving quota {QuotaId}", id);
-                return StatusCode(500, "Internal server error");
-            }
-        }
+        
 
         // POST: api/quotas
         [HttpPost]
-        public async Task<ActionResult<QuotaDto>> CreateQuota(CreateQuotaRequest request)
+        public async Task<ActionResult<object>> CreateQuota(CreateOrUpdateQuotaRequest request)
         {
             try
             {
@@ -137,45 +73,30 @@ namespace CyprusAgriculture.API.Controllers
                 // Create quota
                 var quota = new Quota
                 {
-                    Id = Guid.NewGuid(),
                     Name = request.Name,
                     Description = request.Description,
                     QuestionnaireId = request.QuestionnaireId,
-                    Criteria = JsonSerializer.Serialize(request.Criteria),
-                    TargetCount = request.TargetCount,
-                    IsActive = request.IsActive,
-                    AutoStop = request.AutoStop,
-                    Priority = request.Priority,
-                    CreatedBy = request.CreatedBy,
-                    CreatedAt = DateTime.UtcNow
+                    Criteria = request.SerializedCriteria,
+                    TargetCount = request.TargetCount
                 };
 
                 _context.Quotas.Add(quota);
                 await _context.SaveChangesAsync();
-
-                var quotaDto = new QuotaDto
+                await _context.Entry(quota)
+                    .Reference(b => b.Questionnaire)
+                    .LoadAsync();
+                var quotaDto = new 
                 {
                     Id = quota.Id,
                     Name = quota.Name,
                     Description = quota.Description,
                     QuestionnaireId = quota.QuestionnaireId,
-                    QuestionnaireName = questionnaire.Name,
-                    Criteria = request.Criteria,
-                    TargetCount = quota.TargetCount,
-                    CompletedCount = quota.CompletedCount,
-                    InProgressCount = quota.InProgressCount,
-                    PendingCount = quota.PendingCount,
-                    RemainingCount = quota.RemainingCount,
-                    CompletionPercentage = quota.CompletionPercentage,
-                    Status = quota.Status,
-                    IsActive = quota.IsActive,
-                    AutoStop = quota.AutoStop,
-                    Priority = quota.Priority,
-                    CreatedAt = quota.CreatedAt,
-                    CreatedBy = quota.CreatedBy
+                    QuestionnaireName = quota.Questionnaire.Name,
+                    SerializedCriteria = quota.Criteria,
+                    TargetCount = quota.TargetCount
                 };
 
-                return CreatedAtAction(nameof(GetQuota), new { id = quota.Id }, quotaDto);
+                return Ok(quotaDto);
             }
             catch (Exception ex)
             {
@@ -186,7 +107,7 @@ namespace CyprusAgriculture.API.Controllers
 
         // PUT: api/quotas/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateQuota(Guid id, UpdateQuotaRequest request)
+        public async Task<ActionResult<object>> UpdateQuota(Guid id, CreateOrUpdateQuotaRequest request)
         {
             try
             {
@@ -196,34 +117,29 @@ namespace CyprusAgriculture.API.Controllers
                     return NotFound();
                 }
 
-                // Update fields
-                if (!string.IsNullOrEmpty(request.Name))
-                    quota.Name = request.Name;
-                
-                if (request.Description != null)
-                    quota.Description = request.Description;
-                
-                if (request.Criteria != null)
-                    quota.Criteria = JsonSerializer.Serialize(request.Criteria);
-                
-                if (request.TargetCount.HasValue)
-                    quota.TargetCount = request.TargetCount.Value;
-                
-                if (request.IsActive.HasValue)
-                    quota.IsActive = request.IsActive.Value;
-                
-                if (request.AutoStop.HasValue)
-                    quota.AutoStop = request.AutoStop.Value;
-                
-                if (request.Priority.HasValue)
-                    quota.Priority = request.Priority.Value;
-
-                quota.UpdatedAt = DateTime.UtcNow;
-                quota.UpdatedBy = request.UpdatedBy;
+                quota.Name = request.Name;
+                quota.Description = request.Description;
+                quota.Criteria = request.SerializedCriteria;
+                quota.TargetCount = request.TargetCount;
+                quota.QuestionnaireId = request.QuestionnaireId;
 
                 await _context.SaveChangesAsync();
+                await _context.Entry(quota)
+                    .Reference(b => b.Questionnaire)
+                    .LoadAsync();
+                
+                var quotaDto = new 
+                {
+                    Id = quota.Id,
+                    Name = quota.Name,
+                    Description = quota.Description,
+                    QuestionnaireId = quota.QuestionnaireId,
+                    QuestionnaireName = quota.Questionnaire.Name,
+                    SerializedCriteria = quota.Criteria,
+                    TargetCount = quota.TargetCount
+                };
 
-                return NoContent();
+                return Ok(quotaDto);
             }
             catch (Exception ex)
             {
@@ -255,290 +171,14 @@ namespace CyprusAgriculture.API.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+    }
 
-        // GET: api/quotas/monitoring/{questionnaireId}
-        [HttpGet("monitoring/{questionnaireId}")]
-        public async Task<ActionResult<QuotaMonitoringDto>> GetQuotaMonitoring(Guid questionnaireId)
-        {
-            try
-            {
-                var questionnaire = await _context.Questionnaires.FindAsync(questionnaireId);
-                if (questionnaire == null)
-                {
-                    return NotFound();
-                }
-
-                var quotas = await _context.Quotas
-                    .Where(q => q.QuestionnaireId == questionnaireId)
-                    .Include(q => q.QuotaResponses)
-                    .OrderBy(q => q.Priority)
-                    .ThenBy(q => q.CreatedAt)
-                    .ToListAsync();
-
-                var quotaStatuses = quotas.Select(quota =>
-                {
-                    var today = DateTime.UtcNow.Date;
-                    var weekAgo = today.AddDays(-7);
-
-                    var todayCompletions = quota.QuotaResponses
-                        .Count(qr => qr.Status == "completed" && qr.CompletionDate?.Date == today);
-
-                    var weekCompletions = quota.QuotaResponses
-                        .Count(qr => qr.Status == "completed" && qr.CompletionDate >= weekAgo);
-
-                    var dailyRate = weekCompletions / 7.0m;
-                    var estimatedCompletion = dailyRate > 0 
-                        ? today.AddDays((double)(quota.RemainingCount / dailyRate))
-                        : (DateTime?)null;
-
-                    return new QuotaStatusDto
-                    {
-                        Id = quota.Id,
-                        Name = quota.Name,
-                        Criteria = JsonSerializer.Deserialize<QuotaCriteriaDto>(quota.Criteria) ?? new QuotaCriteriaDto(),
-                        TargetCount = quota.TargetCount,
-                        CompletedCount = quota.CompletedCount,
-                        InProgressCount = quota.InProgressCount,
-                        PendingCount = quota.PendingCount,
-                        RemainingCount = quota.RemainingCount,
-                        CompletionPercentage = quota.CompletionPercentage,
-                        Status = quota.Status,
-                        IsActive = quota.IsActive,
-                        Priority = quota.Priority,
-                        TodayCompletions = todayCompletions,
-                        WeekCompletions = weekCompletions,
-                        DailyRate = dailyRate,
-                        EstimatedCompletion = estimatedCompletion
-                    };
-                }).ToList();
-
-                var summary = new QuotaSummaryDto
-                {
-                    TotalQuotas = quotas.Count,
-                    ActiveQuotas = quotas.Count(q => q.IsActive),
-                    CompletedQuotas = quotas.Count(q => q.Status == "Completed"),
-                    TotalTargetCount = quotas.Sum(q => q.TargetCount),
-                    TotalCompletedCount = quotas.Sum(q => q.CompletedCount),
-                    TotalInProgressCount = quotas.Sum(q => q.InProgressCount),
-                    TotalPendingCount = quotas.Sum(q => q.PendingCount),
-                    TotalRemainingCount = quotas.Sum(q => q.RemainingCount),
-                    OverallCompletionPercentage = quotas.Sum(q => q.TargetCount) > 0 
-                        ? Math.Round((decimal)quotas.Sum(q => q.CompletedCount) / quotas.Sum(q => q.TargetCount) * 100, 2) 
-                        : 0,
-                    TodayCompletions = quotaStatuses.Sum(qs => qs.TodayCompletions),
-                    WeekCompletions = quotaStatuses.Sum(qs => qs.WeekCompletions),
-                    AverageDailyRate = quotaStatuses.Average(qs => qs.DailyRate)
-                };
-
-                var monitoring = new QuotaMonitoringDto
-                {
-                    QuestionnaireId = questionnaireId,
-                    QuestionnaireName = questionnaire.Name,
-                    Quotas = quotaStatuses,
-                    Summary = summary,
-                    LastUpdated = DateTime.UtcNow
-                };
-
-                return Ok(monitoring);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving quota monitoring for questionnaire {QuestionnaireId}", questionnaireId);
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        // GET: api/quotas/variables
-        [HttpGet("variables")]
-        public async Task<ActionResult<IEnumerable<QuotaVariableDto>>> GetQuotaVariables()
-        {
-            try
-            {
-                var variables = await _context.QuotaVariables
-                    .Where(v => v.IsActive)
-                    .OrderBy(v => v.SortOrder)
-                    .ThenBy(v => v.DisplayName)
-                    .ToListAsync();
-
-                var variableDtos = variables.Select(variable =>
-                {
-                    var possibleValues = string.IsNullOrEmpty(variable.PossibleValues) 
-                        ? new List<QuotaVariableValueDto>()
-                        : JsonSerializer.Deserialize<List<QuotaVariableValueDto>>(variable.PossibleValues) ?? new List<QuotaVariableValueDto>();
-
-                    return new QuotaVariableDto
-                    {
-                        Id = variable.Id,
-                        Name = variable.Name,
-                        DisplayName = variable.DisplayName,
-                        Description = variable.Description,
-                        VariableType = variable.VariableType,
-                        DataType = variable.DataType,
-                        PossibleValues = possibleValues,
-                        IsActive = variable.IsActive,
-                        SortOrder = variable.SortOrder
-                    };
-                }).ToList();
-
-                return Ok(variableDtos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving quota variables");
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        // POST: api/quotas/variables
-        [HttpPost("variables")]
-        public async Task<ActionResult<QuotaVariableDto>> CreateQuotaVariable(CreateQuotaVariableRequest request)
-        {
-            try
-            {
-                var variable = new QuotaVariable
-                {
-                    Id = Guid.NewGuid(),
-                    Name = request.Name,
-                    DisplayName = request.DisplayName,
-                    Description = request.Description,
-                    VariableType = request.VariableType,
-                    DataType = request.DataType,
-                    PossibleValues = JsonSerializer.Serialize(request.PossibleValues),
-                    IsActive = request.IsActive,
-                    SortOrder = request.SortOrder,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.QuotaVariables.Add(variable);
-                await _context.SaveChangesAsync();
-
-                var variableDto = new QuotaVariableDto
-                {
-                    Id = variable.Id,
-                    Name = variable.Name,
-                    DisplayName = variable.DisplayName,
-                    Description = variable.Description,
-                    VariableType = variable.VariableType,
-                    DataType = variable.DataType,
-                    PossibleValues = request.PossibleValues,
-                    IsActive = variable.IsActive,
-                    SortOrder = variable.SortOrder
-                };
-
-                return CreatedAtAction(nameof(GetQuotaVariables), variableDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating quota variable");
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        // GET: api/quotas/monitoring
-        [HttpGet("monitoring")]
-        public async Task<ActionResult<IEnumerable<object>>> GetQuotaMonitoring([FromQuery] Guid? questionnaireId = null)
-        {
-            try
-            {
-                var query = _context.Quotas
-                    .Include(q => q.QuotaResponses)
-                    .AsQueryable();
-
-                if (questionnaireId.HasValue)
-                {
-                    query = query.Where(q => q.QuestionnaireId == questionnaireId);
-                }
-
-                var quotas = await query.ToListAsync();
-
-                var monitoringData = quotas.Select(quota => 
-                {
-                    var completedCount = quota.QuotaResponses?.Count(r => r.Status == "completed") ?? 0;
-                    var inProgressCount = quota.QuotaResponses?.Count(r => r.Status == "in_progress") ?? 0;
-                    var pendingCount = quota.QuotaResponses?.Count(r => r.Status == "allocated") ?? 0;
-                    var totalResponses = quota.QuotaResponses?.Count ?? 0;
-                    var remainingCount = quota.TargetCount - completedCount;
-                    var completionPercentage = quota.TargetCount > 0 ? (double)completedCount / quota.TargetCount * 100 : 0;
-
-                    // Calculate today's completions
-                    var today = DateTime.UtcNow.Date;
-                    var todayCompletions = quota.QuotaResponses?.Count(r => 
-                        r.Status == "completed" && 
-                        r.CompletionDate.HasValue && 
-                        r.CompletionDate.Value.Date == today) ?? 0;
-
-                    // Calculate week completions
-                    var weekStart = today.AddDays(-(int)today.DayOfWeek);
-                    var weekCompletions = quota.QuotaResponses?.Count(r => 
-                        r.Status == "completed" && 
-                        r.CompletionDate.HasValue && 
-                        r.CompletionDate.Value.Date >= weekStart) ?? 0;
-
-                    // Determine status
-                    string status;
-                    if (completionPercentage >= 100)
-                        status = "Completed";
-                    else if (completionPercentage >= 80)
-                        status = "Near Completion";
-                    else if (completionPercentage > 0)
-                        status = "Active";
-                    else
-                        status = "Pending";
-
-                    // Calculate completion rate (completions per day)
-                    var activeDays = quota.QuotaResponses?.Any() == true ? 
-                        (DateTime.UtcNow - quota.CreatedAt).Days + 1 : 1;
-                    var completionRate = activeDays > 0 ? (double)completedCount / activeDays : 0;
-
-                    // Estimate completion date
-                    string estimatedCompletion = "";
-                    if (remainingCount > 0 && completionRate > 0)
-                    {
-                        var daysToComplete = Math.Ceiling(remainingCount / completionRate);
-                        var estimatedDate = DateTime.UtcNow.AddDays(daysToComplete);
-                        estimatedCompletion = estimatedDate.ToString("yyyy-MM-dd");
-                    }
-
-                    return new
-                    {
-                        id = quota.Id.ToString(),
-                        name = quota.Name,
-                        description = quota.Description,
-                        questionnaireName = "Ερωτηματολόγιο", // Default name
-                        criteria = JsonSerializer.Deserialize<object>(quota.Criteria),
-                        targetCount = quota.TargetCount,
-                        completedCount,
-                        inProgressCount,
-                        pendingCount,
-                        remainingCount = Math.Max(0, remainingCount),
-                        completionPercentage = Math.Round(completionPercentage, 1),
-                        status,
-                        isActive = quota.IsActive,
-                        lastCompletionTime = quota.QuotaResponses?
-                            .Where(r => r.Status == "completed" && r.CompletionDate.HasValue)
-                            .OrderByDescending(r => r.CompletionDate)
-                            .FirstOrDefault()?.CompletionDate?.ToString("yyyy-MM-dd HH:mm:ss"),
-                        todayCompletions,
-                        weekCompletions,
-                        averageCompletionTime = 15.5, // Mock data
-                        estimatedCompletion,
-                        completionRate = Math.Round(completionRate, 2),
-                        allocationProgress = new
-                        {
-                            allocatedCount = totalResponses,
-                            availableCount = Math.Max(0, quota.TargetCount - totalResponses),
-                            waitingCount = pendingCount
-                        }
-                    };
-                }).ToList();
-
-                return Ok(monitoringData);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting quota monitoring data");
-                return StatusCode(500, "Internal server error");
-            }
-        }
+    public class CreateOrUpdateQuotaRequest
+    {
+        public Guid QuestionnaireId {get;set;}
+        public string Name {get;set;}
+        public string? Description {get;set;}
+        public int TargetCount {get;set;}
+        public string SerializedCriteria {get;set;}
     }
 }

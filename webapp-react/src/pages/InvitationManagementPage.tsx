@@ -27,11 +27,14 @@ import { Switch } from '../components/ui/switch';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { InvitationBatch, InvitationTemplate, Questionnaire, QuestionnaireService } from '@/services/questionnaireService';
 import { Editor } from '@tinymce/tinymce-react';
+import { Farm, SampleGroup } from '@/services/samplesService';
+import { User, UsersService } from '@/services/usersService';
 
 
 
 const InvitationManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('batches');
+  const [users, setUsers] = useState<User[]>([]);
   const [batches, setBatches] = useState<InvitationBatch[]>([]);
   const [templates, setTemplates] = useState<InvitationTemplate[]>([]);
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
@@ -39,9 +42,11 @@ const InvitationManagementPage: React.FC = () => {
   const [selectedBatch, setSelectedBatch] = useState<InvitationBatch | null>(null);
   
   const [selectedTemplate, setSelectedTemplate] = useState<InvitationTemplate|null>(null);
-    const [batchesSearchTerm, setBatchesSearchTerm] = useState('');
+  const [batchesSearchTerm, setBatchesSearchTerm] = useState('');
   const [templatesSearchTerm, setTemplatesSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [questionnaireSampleGroup, setQuestionnaireSampleGroups] = useState<SampleGroup[]>([]);
+  const [questionnaireParticipants, setQuestionnaireParticipants] = useState<Farm[]>([]);
 
   // Mock data για demonstration
   useEffect(() => {
@@ -50,7 +55,8 @@ const InvitationManagementPage: React.FC = () => {
       await Promise.all([
         fetchQuestionnaires(),
         fetchBatches(),
-        fetchTemplates()
+        fetchTemplates(),
+        fetchUsers()
       ]);
       setLoading(false);
     }
@@ -72,9 +78,14 @@ const InvitationManagementPage: React.FC = () => {
   };
 
   const fetchTemplates = async ()=> {
-    var templates = await QuestionnaireService.GetInvitationTemplates();
+    var templates = await QuestionnaireService.getInvitationTemplates();
     setTemplates(templates);
   }
+
+  const fetchUsers = async () => {
+    var users = await UsersService.getUsers();
+    setUsers(users);
+  };
 
   // Logo upload handlers for templates (same behavior as ThemesPage)
   const handleTemplateLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,15 +118,15 @@ const InvitationManagementPage: React.FC = () => {
     setSelectedTemplate((prev) => (prev ? ({ ...prev, logoImageBase64: '' }) : prev));
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('el-GR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleFarmSelection = (farmId: string, selected: boolean) => {
+    const existingRecipientFarmIds = selectedBatch!.recipientFarmIds!;
+    if (selected) {
+      setSelectedBatch({...selectedBatch!, recipientFarmIds:[...existingRecipientFarmIds, farmId]});
+    } else {
+      setSelectedBatch({...selectedBatch!, recipientFarmIds:[...existingRecipientFarmIds.filter(id=>id!==farmId)]});
+    }
   };
+
 
   const filteredBatches = batches.filter(batch => {
     const matchesSearch = batch.name.toLowerCase().includes(batchesSearchTerm.toLowerCase()) ||
@@ -132,23 +143,22 @@ const InvitationManagementPage: React.FC = () => {
 
   const BatchAnalytics: React.FC<{ batch: InvitationBatch }> = ({ batch }) => {
     const deliveryData = [
-      { name: 'Παραδόθηκαν', value: batch.deliveredInvitations, color: '#22c55e' },
-      { name: 'Απέτυχαν', value: batch.failedInvitations, color: '#ef4444' },
-      { name: 'Εκκρεμείς', value: batch.totalInvitations - batch.deliveredInvitations - batch.failedInvitations, color: '#f59e0b' }
+      { name: 'Παραδόθηκαν', value: 0, color: '#22c55e' },
+      { name: 'Απέτυχαν', value: 0, color: '#ef4444' },
+      { name: 'Εκκρεμείς', value: (batch.recipientFarmIds??[]).length, color: '#f59e0b' }
     ];
 
     const engagementData = [
-      { name: 'Άνοιξαν', value: batch.openedInvitations, color: '#3b82f6' },
-      { name: 'Κλικ', value: batch.clickedInvitations, color: '#8b5cf6' },
-      { name: 'Ξεκίνησαν', value: batch.startedResponses, color: '#06b6d4' },
-      { name: 'Ολοκλήρωσαν', value: batch.completedResponses, color: '#10b981' }
+      { name: 'Δεν ξεκίνησαν', value: (batch.recipientFarmIds??[]).length, color: '#ef4444' },
+      { name: 'Ξεκίνησαν', value: 0, color: '#06b6d4' },
+      { name: 'Ολοκλήρωσαν', value: 0, color: '#10b981' }
     ];
 
     const timelineData = [
-      { name: 'Εβδ. 1', sent: 50, opened: 35, started: 25, completed: 15 },
-      { name: 'Εβδ. 2', sent: 0, opened: 20, started: 15, completed: 12 },
-      { name: 'Εβδ. 3', sent: 0, opened: 15, started: 12, completed: 10 },
-      { name: 'Εβδ. 4', sent: 0, opened: 10, started: 8, completed: 8 }
+      { name: 'Εβδ. 1', sent: (batch.recipientFarmIds??[]).length, started: 0, completed: 0 },
+      { name: 'Εβδ. 2', sent: 0, started: 0, completed: 0 },
+      { name: 'Εβδ. 3', sent: 0, started: 0, completed: 0 },
+      { name: 'Εβδ. 4', sent: 0, started: 0, completed: 0 }
     ];
 
     return (
@@ -159,10 +169,10 @@ const InvitationManagementPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Ποσοστό Παράδοσης</p>
-                  <p className="text-2xl font-bold text-green-600">{batch.deliveryRate.toFixed(1)}%</p>
+                  <p className="text-sm text-gray-600" title='Το ποσοστό των επιτυχώς απεσταλμένων προσκλήσεων προς το σύνολο των προσκλήσεων'>Ποσοστό Παράδοσης</p>
+                  <p className="text-2xl font-bold text-red-600">0%</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
@@ -171,10 +181,10 @@ const InvitationManagementPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Ποσοστό Συμμετοχής</p>
-                  <p className="text-2xl font-bold text-blue-600">{batch.participationRate.toFixed(1)}%</p>
+                  <p className="text-sm text-gray-600" title='Το ποσοστό των εκκινημένων ερωτηματολογίων προς το σύνολο των προσκλήσεων'>Ποσοστό Συμμετοχής</p>
+                  <p className="text-2xl font-bold text-red-600">0%</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
@@ -183,10 +193,10 @@ const InvitationManagementPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Ποσοστό Ολοκλήρωσης</p>
-                  <p className="text-2xl font-bold text-purple-600">{batch.completionRate.toFixed(1)}%</p>
+                  <p className="text-sm text-gray-600" title='Το ποσοστό των οριστικά υποβληθέντων ερωτηματολογίων προς το σύνολο των προσκλήσεων'>Ποσοστό Ολοκλήρωσης</p>
+                  <p className="text-2xl font-bold text-red-600">0%</p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-purple-600" />
+                <BarChart3 className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
@@ -196,7 +206,7 @@ const InvitationManagementPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Σύνολο Προσκλήσεων</p>
-                  <p className="text-2xl font-bold text-gray-900">{batch.totalInvitations}</p>
+                  <p className="text-2xl font-bold text-gray-900">{(batch.recipientFarmIds??[]).length}</p>
                 </div>
                 <Mail className="h-8 w-8 text-gray-600" />
               </div>
@@ -263,10 +273,10 @@ const InvitationManagementPage: React.FC = () => {
               <LineChart data={timelineData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis />
+                <YAxis min={0} max={10} />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="opened" stroke="#3b82f6" name="Άνοιξαν" />
+                <Line type="monotone" dataKey="sent" stroke="#ef4444" name="Δεν ξεκίνησαν" />
                 <Line type="monotone" dataKey="started" stroke="#06b6d4" name="Ξεκίνησαν" />
                 <Line type="monotone" dataKey="completed" stroke="#10b981" name="Ολοκλήρωσαν" />
               </LineChart>
@@ -292,38 +302,33 @@ const InvitationManagementPage: React.FC = () => {
                 <tbody className="bg-white">
                   <tr className="border-b">
                     <td className="p-3">Σύνολο Προσκλήσεων</td>
-                    <td className="text-right p-3">{batch.totalInvitations}</td>
+                    <td className="text-right p-3">{(batch.recipientFarmIds??[]).length}</td>
                     <td className="text-right p-3">100%</td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-3">Παραδόθηκαν</td>
-                    <td className="text-right p-3">{batch.deliveredInvitations}</td>
-                    <td className="text-right p-3">{batch.deliveryRate.toFixed(1)}%</td>
+                    <td className="text-right p-3">0</td>
+                    <td className="text-right p-3">0%</td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="p-3">Εκκρεμούν</td>
+                    <td className="text-right p-3 text-red-600">{(batch.recipientFarmIds??[]).length}</td>
+                    <td className="text-right p-3 text-red-600">100%</td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-3">Απέτυχαν</td>
-                    <td className="text-right p-3 text-red-600">{batch.failedInvitations}</td>
-                    <td className="text-right p-3 text-red-600">{((batch.failedInvitations / batch.totalInvitations) * 100).toFixed(1)}%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-3">Άνοιξαν Email</td>
-                    <td className="text-right p-3">{batch.openedInvitations}</td>
-                    <td className="text-right p-3">{batch.deliveredInvitations > 0 ? ((batch.openedInvitations / batch.deliveredInvitations) * 100).toFixed(1) : 0}%</td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-3">Κλικ στον Σύνδεσμο</td>
-                    <td className="text-right p-3">{batch.clickedInvitations}</td>
-                    <td className="text-right p-3">{batch.openedInvitations > 0 ? ((batch.clickedInvitations / batch.openedInvitations) * 100).toFixed(1) : 0}%</td>
+                    <td className="text-right p-3 text-red-600">0</td>
+                    <td className="text-right p-3 text-red-600">0%</td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-3">Ξεκίνησαν Ερωτηματολόγιο</td>
-                    <td className="text-right p-3">{batch.startedResponses}</td>
-                    <td className="text-right p-3">{batch.participationRate.toFixed(1)}%</td>
+                    <td className="text-right p-3">0</td>
+                    <td className="text-right p-3">0%</td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-3 font-semibold">Ολοκλήρωσαν Ερωτηματολόγιο</td>
-                    <td className="text-right p-3 font-semibold text-green-600">{batch.completedResponses}</td>
-                    <td className="text-right p-3 font-semibold text-green-600">{batch.completionRate.toFixed(1)}%</td>
+                    <td className="text-right p-3 font-semibold text-green-600">0</td>
+                    <td className="text-right p-3 font-semibold text-green-600">0%</td>
                   </tr>
                 </tbody>
               </table>
@@ -396,7 +401,11 @@ const InvitationManagementPage: React.FC = () => {
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               </div>
             </div>
-            <Button onClick={() => setSelectedBatch({} as InvitationBatch)} className="flex items-center gap-2">
+            <Button onClick={() => {
+              setQuestionnaireParticipants([]);
+              setQuestionnaireSampleGroups([]);
+              setSelectedBatch({recipientFarmIds:[]} as unknown as InvitationBatch);
+              }} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Νέα Παρτίδα
             </Button>
@@ -429,7 +438,7 @@ const InvitationManagementPage: React.FC = () => {
                         
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <span className="text-gray-500">Σύνολο:</span>
+                            <span className="text-gray-500">Σύνολο εκμεταλλεύσεων στην πρόσκληση:</span>
                             <span className="ml-2 font-medium">{(batch.recipientFarmIds??[]).length}</span>
                           </div>
                         </div>
@@ -438,13 +447,13 @@ const InvitationManagementPage: React.FC = () => {
                           {batch.scheduledAt && (
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
-                              Προγραμματισμένο: {formatDate(batch.scheduledAt)}
+                              Προγραμματισμένο: {batch.scheduledAt}
                             </div>
                           )}
                           {batch.sentAt && (
                             <div className="flex items-center gap-1">
                               <Send className="h-4 w-4" />
-                              Στάλθηκε: {formatDate(batch.sentAt)}
+                              Στάλθηκε: {batch.sentAt}
                             </div>
                           )}
                         </div>
@@ -530,7 +539,7 @@ const InvitationManagementPage: React.FC = () => {
                       Επεξεργασία
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1" onClick={async ()=>{
-                      await QuestionnaireService.DeleteInvitationTemplate(template.id);
+                      await QuestionnaireService.deleteInvitationTemplate(template.id);
                       fetchTemplates();
                     }}>
                       <Delete className="h-4 w-4 mr-2" />
@@ -547,7 +556,7 @@ const InvitationManagementPage: React.FC = () => {
       </Tabs>
 
       {/* Batch Preview Dialog */}
-      {selectedBatch && (
+      {(selectedBatch && selectedBatch.id) && (
         <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
           <DialogContent 
             className="max-w-none w-[95vw] max-h-[95vh] h-[95vh] overflow-y-auto bg-white border border-gray-300 p-8"
@@ -574,7 +583,7 @@ const InvitationManagementPage: React.FC = () => {
       )}
 
       {/* Create Batch Dialog */}
-      {selectedBatch && (
+      {(selectedBatch && !selectedBatch.id) && (
         <Dialog open={selectedBatch} onOpenChange={()=>setSelectedBatch(null)}>
           <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto bg-white p-6 rounded-xl shadow-lg !max-w-[1400px]" style={{ width: 'min(1400px, 96vw)' }}>
             <DialogHeader className="bg-white pb-4">
@@ -592,30 +601,31 @@ const InvitationManagementPage: React.FC = () => {
                       id="batch-name" 
                       placeholder="π.χ. Γεωργική Έρευνα Λευκωσίας - Φάση Β" 
                       className="mt-2 bg-white border-gray-300"
+                      value={selectedBatch.name}
+                      onChange={(e)=>setSelectedBatch({...selectedBatch, name:e.target.value})}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="questionnaire" className="text-base font-medium text-gray-700">Ερωτηματολόγιο</Label>
-                    <Select>
-                      <SelectTrigger className="mt-2 bg-white border-gray-300">
-                        <SelectValue placeholder="Επιλέξτε ερωτηματολόγιο" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {questionnaires.map(q => (
-                          <SelectItem key={q.id} value={q.id} className="bg-white hover:bg-gray-50">{q.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
                     <Label htmlFor="template" className="text-base font-medium text-gray-700">Πρότυπο Πρόσκλησης</Label>
-                    <Select>
+                    <Select value={selectedBatch.templateId} onValueChange={async (newTemplateId:string)=>{
+                        const newTemplate = templates.find(t=>t.id === newTemplateId);
+                        const newQuestionnaireId = newTemplate?.questionnaireId!;
+                        const farms = await QuestionnaireService.getQuestionnaireParticipants(newQuestionnaireId);
+                        setQuestionnaireParticipants(farms);
+
+                        const sampleGroups = await QuestionnaireService.getQuestionnaireSampleGroups(newQuestionnaireId);
+                        setQuestionnaireSampleGroups(sampleGroups.map(sg=>{
+                          sg.farmIds = JSON.parse(sg.serializedFarmIds!);
+                          return sg;
+                        }));
+                        setSelectedBatch({...selectedBatch, templateId:newTemplateId});
+                      }}>
                       <SelectTrigger className="mt-2 bg-white border-gray-300">
                         <SelectValue placeholder="Επιλέξτε πρότυπο" />
                       </SelectTrigger>
                       <SelectContent className="bg-white">
                         {templates.map(t => (
-                          <SelectItem key={t.id} value={t.id} className="bg-white hover:bg-gray-50">{t.name}</SelectItem>
+                          <SelectItem key={t.id} value={t.id} className="bg-white hover:bg-gray-50">{t.name} (Ερωτηματολόγιο: {t.questionnaireName})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -624,40 +634,88 @@ const InvitationManagementPage: React.FC = () => {
                 
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="recipient-count" className="text-base font-medium text-gray-700">Αριθμός Παραληπτών</Label>
-                    <Input 
-                      id="recipient-count" 
-                      type="number" 
-                      placeholder="π.χ. 150" 
-                      className="mt-2 bg-white border-gray-300"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="schedule-date" className="text-base font-medium text-gray-700">Προγραμματισμός Αποστολής</Label>
                     <Input 
+                      value={selectedBatch.scheduledAt}
+                      onChange={(e)=>setSelectedBatch({...selectedBatch, scheduledAt:e.target.value})}
                       id="schedule-date" 
                       type="datetime-local" 
                       className="mt-2 bg-white border-gray-300"
                     />
                   </div>
-                  <div className="flex items-center space-x-3 pt-2">
-                    <Switch id="immediate-send" />
-                    <Label htmlFor="immediate-send" className="text-base font-medium text-gray-700">Άμεση αποστολή</Label>
-                  </div>
+                  
                 </div>
               </div>
-              
-              <div className="border-t pt-4">
-                <Label className="text-base font-medium text-gray-700">Περιγραφή (προαιρετική)</Label>
-                <Textarea 
-                  placeholder="Προσθέστε περιγραφή για την παρτίδα προσκλήσεων..."
-                  rows={3}
-                  className="mt-2 bg-white border-gray-300"
-                />
+
+              {/* LIST OF SAMPLE GROUPS AND SUBLIST OF FARMS */}
+              <div>
+                {questionnaireSampleGroup.map(sg=>{
+                  const user = users.find(u => u.id === sg.interviewerId);
+                  return <div key={sg.id} style={{marginTop:10}}>
+                    <div><strong>{sg.name} (Δείγμα: {sg.sampleName})</strong></div>
+                    <div>Συνεντεύκτης: {user?.lastName} {user?.firstName}</div>
+                    {sg.farmIds?.map(farmId => {
+                      const farm = questionnaireParticipants.find(f=> f.id === farmId)!;
+                          return <div
+                              key={farm.id}
+                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                selectedBatch.recipientFarmIds!.includes(farm.id)
+                                  ? 'bg-blue-50 border-blue-300'
+                                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                              }`}
+                              onClick={() => handleFarmSelection(farm.id, !selectedBatch.recipientFarmIds!.includes(farm.id))}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedBatch.recipientFarmIds!.includes(farm.id)}
+                                      onChange={(e) => handleFarmSelection(farm.id, e.target.checked)}
+                                      className="h-4 w-4 text-blue-600 rounded"
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <span className="font-medium text-gray-900">{farm.farmCode}</span>
+                                  </div>
+                                  <p className="text-sm text-gray-700 mt-1">{farm.ownerName}</p>
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
+                                      {farm.province}
+                                    </span>
+                                    <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                                      {farm.farmType}
+                                    </span>
+                                    <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
+                                      {farm.totalArea} στρ.
+                                    </span>
+                                    {farm.economicSize && (
+                                      <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">
+                                        {farm.economicSize}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>;
+                    })}
+                    <hr/>
+                  </div>;})}
               </div>
               
               <div className="flex gap-3 pt-6 border-t bg-white">
-                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">Δημιουργία Παρτίδας</Button>
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={selectedBatch.sentAt} onClick={async ()=>{
+                  selectedBatch.serializedFarmIds = JSON.stringify(selectedBatch.recipientFarmIds);
+                  await QuestionnaireService.createInvitationBatch(selectedBatch);
+                  setSelectedBatch(null);
+                  fetchBatches();
+                }}>Αποθήκευση</Button>
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" disabled={selectedBatch.sentAt} onClick={async ()=>{
+                  selectedBatch.serializedFarmIds = JSON.stringify(selectedBatch.recipientFarmIds);
+                  selectedBatch.sentAt = (new Date()).toISOString();
+                  await QuestionnaireService.createInvitationBatch(selectedBatch);
+                  setSelectedBatch(null);
+                  fetchBatches();
+                }}>Αποστολή τώρα</Button>
                 <Button variant="outline" onClick={() => setSelectedBatch(null)} className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50">Ακύρωση</Button>
               </div>
             </div>
@@ -701,7 +759,9 @@ const InvitationManagementPage: React.FC = () => {
                   <div>
                     <Label htmlFor="questionnaire-select" className="text-base font-medium text-gray-700">Συσχετισμένο Ερωτηματολόγιο</Label>
                     <Select value={selectedTemplate.questionnaireId} 
-                      onValueChange={(newQuestionnaireId:string) => setSelectedTemplate({...selectedTemplate, questionnaireId:newQuestionnaireId})}>
+                      onValueChange={async (newQuestionnaireId:string) => {
+                        setSelectedTemplate({...selectedTemplate, questionnaireId:newQuestionnaireId});
+                      }}>
                       <SelectTrigger className="mt-2 bg-white border-gray-300">
                         <SelectValue placeholder="Επιλέξτε ερωτηματολόγιο" />
                       </SelectTrigger>
@@ -820,8 +880,8 @@ const InvitationManagementPage: React.FC = () => {
               
               <div className="flex gap-3 pt-6 border-t bg-white">
                 <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" onClick={ async () => {
-                  if (selectedTemplate.id) await QuestionnaireService.UpdateInvitationTemplate(selectedTemplate.id, selectedTemplate);
-                  else await QuestionnaireService.CreateInvitationTemplate(selectedTemplate);
+                  if (selectedTemplate.id) await QuestionnaireService.updateInvitationTemplate(selectedTemplate.id, selectedTemplate);
+                  else await QuestionnaireService.createInvitationTemplate(selectedTemplate);
                   setSelectedTemplate(null);
                   fetchTemplates();
                 }}>Αποθήκευση</Button>

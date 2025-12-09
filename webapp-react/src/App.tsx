@@ -10,9 +10,8 @@ import { SampleManagementPage } from './pages/SampleManagementPage';
 import { ThemesPage } from './pages/ThemesPage';
 import InvitationManagementPage from './pages/InvitationManagementPage';
 import LocationManagementHub from './components/LocationManagementHub';
-import QuotaManagement from './components/QuotaManagement';
-import QuotaMonitoringDashboard from './components/QuotaMonitoringDashboard';
-import QuotaAllocationManager from './components/QuotaAllocationManager';
+import QuotaManagementPage from './pages/QuotaManagementPage';
+import QuotaMonitoringDashboardPage from './pages/QuotaMonitoringDashboardPage';
 import ResponsesPage from './pages/ResponsesPage';
 import QuestionnairesPage from './pages/QuesitionnairesPage';
 
@@ -45,11 +44,9 @@ function AppContent() {
         case 'locations':
           return <LocationManagementHub />;
         case 'quotas':
-          return <QuotaManagement />;
+          return <QuotaManagementPage />;
         case 'quota-monitoring':
-          return <QuotaMonitoringDashboard />;
-        case 'quota-allocation':
-          return <QuotaAllocationManager />;
+          return <QuotaMonitoringDashboardPage />;
         case 'reports':
           return <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">{language === 'el' ? 'Αναφορές' : 'Reports'}</h2>

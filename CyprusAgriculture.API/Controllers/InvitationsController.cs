@@ -291,8 +291,9 @@ namespace CyprusAgriculture.API.Controllers
                 {
                     Name = request.Name,
                     InvitationTemplateId = request.TemplateId,
-                    ScheduledAt = request.ScheduledAt,
-                    RecipientFarms = request.SerializedFarmIds
+                    ScheduledAt = request.ScheduledAt.HasValue ? request.ScheduledAt.Value.ToUniversalTime() : null,
+                    RecipientFarms = request.SerializedFarmIds,
+                    SentAt = request.SentAt.HasValue? request.SentAt.Value.ToUniversalTime() : null,
                 };
 
                 _context.InvitationBatches.Add(batch);
@@ -366,6 +367,7 @@ namespace CyprusAgriculture.API.Controllers
         public string Name { get; set; } = string.Empty;
         public Guid TemplateId { get; set; }
         public DateTime? ScheduledAt { get; set; }
+        public DateTime? SentAt {get;set;}
         public string SerializedFarmIds { get; set; }
     }
     

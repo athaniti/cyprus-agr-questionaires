@@ -42,7 +42,6 @@ const translations = {
     quotas: 'Όρια',
     quotaManagement: 'Διαχείριση Ορίων',
     quotaMonitoring: 'Παρακολούθηση',
-    quotaAllocation: 'Κατανομή Συμμετεχόντων',
     locations: 'Τοποθεσίες',
     reports: 'Αναφορές',
     formResponses: 'Προβολή Απαντήσεων',
@@ -57,7 +56,6 @@ const translations = {
     quotas: 'Quotas',
     quotaManagement: 'Quota Management',
     quotaMonitoring: 'Monitoring',
-    quotaAllocation: 'Participant Allocation',
     locations: 'Locations',
     reports: 'Reports',
     formResponses: 'Form Responses',
@@ -92,8 +90,7 @@ export function Sidebar({ currentView, onViewChange, language, user, onLogout }:
       hasSubMenu: true,
       subItems: [
         { id: 'quotas', icon: Settings, label: t.quotaManagement },
-        { id: 'quota-monitoring', icon: Monitor, label: t.quotaMonitoring },
-        { id: 'quota-allocation', icon: Users, label: t.quotaAllocation }
+        { id: 'quota-monitoring', icon: Monitor, label: t.quotaMonitoring }
       ]
     },
     { id: 'locations', icon: MapPin, label: t.locations },

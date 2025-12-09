@@ -473,9 +473,47 @@ namespace CyprusAgriculture.API.Controllers
 
                 return Ok(groups);
         }
+
+        [HttpGet("{id}/participants")]
+        public async Task<ActionResult<object>> GetQuestionnaireParticipants(Guid id)
+        {
+            try
+            {
+                var questionnaire = await _context.Questionnaires.FindAsync(id);
+                if (questionnaire == null)
+                {
+                    return NotFound(new { success = false, message = "Questionnaire not found" });
+                }
+
+                var farms = await _context.SampleParticipants
+                    .Where(sp => sp.Sample.QuestionnaireId == id)
+                    .Include(sp => sp.Farm)
+                    .Select(sp => new
+                    {
+                        sp.Farm!.Id,
+                        sp.Farm.FarmCode,
+                        sp.Farm.OwnerName,
+                        sp.Farm.Province,
+                        sp.Farm.Community,
+                        sp.Farm.FarmType,
+                        sp.Farm.TotalArea,
+                        sp.Farm.EconomicSize,
+                        sp.Farm.MainCrops,
+                        sp.Farm.LivestockTypes,
+                        sp.Farm.LegalStatus,
+                        sp.CreatedAt
+                    })
+                    .ToListAsync();
+
+                return Ok(farms);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sample farms");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
-
-
 
     // DTOs
     public class CreateOrUpdateQuestionnaireRequest
