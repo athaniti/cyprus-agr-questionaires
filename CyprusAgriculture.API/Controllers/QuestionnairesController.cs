@@ -86,7 +86,6 @@ namespace CyprusAgriculture.API.Controllers
             {
                 var questionnaire = await _context.Questionnaires
                     .Include(q => q.Responses)
-                    .Include(q => q.Quotas)
                     .FirstOrDefaultAsync(q => q.Id == id);
 
                 if (questionnaire == null)

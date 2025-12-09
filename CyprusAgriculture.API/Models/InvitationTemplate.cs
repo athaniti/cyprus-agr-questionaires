@@ -16,7 +16,7 @@ namespace CyprusAgriculture.API.Models
         public Guid QuestionnaireId { get; set; }
 
         [ForeignKey(nameof(QuestionnaireId))]
-        public virtual Questionnaire? Questionnaire { get; set; }
+        public virtual Questionnaire Questionnaire { get; set; }
 
         // Email template content
         [Required]
@@ -29,34 +29,10 @@ namespace CyprusAgriculture.API.Models
         public string? PlainTextContent { get; set; }
 
         // Logo settings
-        public string? LogoUrl { get; set; }
+        public string? LogoImageBase64 { get; set; }
         
         [StringLength(20)]
-        public string LogoPosition { get; set; } = "center"; // left, center, right
-
-        // Font settings
-        [StringLength(100)]
-        public string BodyFontFamily { get; set; } = "Arial, sans-serif";
-
-        public int BodyFontSize { get; set; } = 14;
-
-        [StringLength(100)]
-        public string HeaderFontFamily { get; set; } = "Arial, sans-serif";
-
-        public int HeaderFontSize { get; set; } = 18;
-
-        // Template variables that can be used
-        public string? AvailableVariables { get; set; } // JSON array of variable names
-
-        [Required]
-        public Guid CreatedBy { get; set; }
-
-        [ForeignKey(nameof(CreatedBy))]
-        public virtual User? Creator { get; set; }
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public DateTime? UpdatedAt { get; set; }
+        public string LogoAlignment { get; set; } = "center"; // left, center, right
 
         // Navigation properties
         public virtual ICollection<InvitationBatch> InvitationBatches { get; set; } = new List<InvitationBatch>();

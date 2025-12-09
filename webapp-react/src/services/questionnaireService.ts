@@ -14,6 +14,31 @@ export interface Questionnaire {
   responsesCount:number;
 }
 
+export interface InvitationBatch {
+  id: string;
+  name: string;
+  templateId:string;
+  templateName:string;
+  questionnaireId: string;
+  questionnaireName: string;
+  serializedFarmIds?:string;
+  recipientFarmIds?:any[];
+  sentAt?:Date;
+  scheduledAt?:Date;
+}
+
+export interface InvitationTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  htmlContent: string;
+  logoAlignment:string;
+  logoImageBase64:string;
+  plainTextContent:string;
+  questionnaireId:string;
+  questionnaireName: string;
+}
+
 export class QuestionnaireService {
   
   // Get all questionnaires
@@ -90,5 +115,72 @@ export class QuestionnaireService {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+  }
+
+  static async getInvitationBatches(): Promise<InvitationBatch[]> {
+    const response = await fetch(`${API_BASE_URL}/invitations/batches`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  static async GetInvitationTemplates(): Promise<InvitationTemplate[]>{
+    const response = await fetch(`${API_BASE_URL}/invitations/templates`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  static async CreateInvitationTemplate(template:InvitationTemplate): Promise<InvitationTemplate>{
+    const response = await fetch(`${API_BASE_URL}/invitations/templates`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(template),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  static async UpdateInvitationTemplate(id:string, template:InvitationTemplate): Promise<InvitationTemplate>{
+    const response = await fetch(`${API_BASE_URL}/invitations/templates/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(template),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+    static async DeleteInvitationTemplate(id:string): Promise<void>{
+    const response = await fetch(`${API_BASE_URL}/invitations/templates/${id}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
   }
 }

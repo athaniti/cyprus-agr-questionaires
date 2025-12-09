@@ -33,7 +33,5 @@ namespace CyprusAgriculture.API.Models
 
         [ForeignKey("FarmId")]
         public virtual Farm Farm { get; set; } = null!;
-
-        public virtual ICollection<Invitation> Invitations { get; set; } = new List<Invitation>();
     }
 }

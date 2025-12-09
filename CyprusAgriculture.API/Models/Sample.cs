@@ -38,6 +38,5 @@ namespace CyprusAgriculture.API.Models
 
         public virtual ICollection<SampleGroup> SampleGroups { get; set; } = new List<SampleGroup>();
         public virtual ICollection<SampleParticipant> Participants { get; set; } = new List<SampleParticipant>();
-        public virtual ICollection<Invitation> Invitations { get; set; } = new List<Invitation>();
     }
 }

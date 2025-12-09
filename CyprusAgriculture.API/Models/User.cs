@@ -39,6 +39,5 @@ namespace CyprusAgriculture.API.Models
         // Navigation properties
         public virtual ICollection<Questionnaire> CreatedQuestionnaires { get; set; } = new List<Questionnaire>();
         public virtual ICollection<QuestionnaireResponse> Responses { get; set; } = new List<QuestionnaireResponse>();
-        public virtual ICollection<QuestionnaireInvitation> Invitations { get; set; } = new List<QuestionnaireInvitation>();
     }
 }

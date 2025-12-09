@@ -31,6 +31,7 @@
             "@radix-ui/react-toggle": "^1.1.2",
             "@radix-ui/react-toggle-group": "^1.1.2",
             "@radix-ui/react-tooltip": "^1.1.8",
+            "@tinymce/tinymce-react": "^6.3.0",
             "@types/react-beautiful-dnd": "^13.1.8",
             "bootstrap": "^5.3.8",
             "class-variance-authority": "^0.7.1",
@@ -49,6 +50,7 @@
             "recharts": "^2.15.2",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
+            "tinymce": "^8.2.2",
             "vaul": "^1.1.2"
       },
       "devDependencies": {

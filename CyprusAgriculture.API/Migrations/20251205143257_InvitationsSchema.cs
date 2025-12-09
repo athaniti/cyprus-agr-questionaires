@@ -40,6 +40,7 @@ namespace CyprusAgriculture.API.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     invitation_template_id = table.Column<Guid>(type: "uuid", nullable: false),
                     recipient_farms = table.Column<string>(type: "jsonb", nullable: true),
                     scheduled_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),

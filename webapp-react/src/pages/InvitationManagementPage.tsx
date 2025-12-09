@@ -11,7 +11,8 @@ import {
   Users,
   FileText,
   Search,
-  Filter
+  Filter,
+  Delete
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -24,181 +25,90 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Switch } from '../components/ui/switch';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { InvitationBatch, InvitationTemplate, Questionnaire, QuestionnaireService } from '@/services/questionnaireService';
+import { Editor } from '@tinymce/tinymce-react';
 
-interface InvitationBatch {
-  id: string;
-  name: string;
-  questionnaireName: string;
-  totalInvitations: number;
-  deliveredInvitations: number;
-  failedInvitations: number;
-  openedInvitations: number;
-  clickedInvitations: number;
-  startedResponses: number;
-  completedResponses: number;
-  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'completed';
-  scheduledSendTime?: string;
-  sentAt?: string;
-  createdAt: string;
-  participationRate: number;
-  completionRate: number;
-  deliveryRate: number;
-}
 
-interface InvitationTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  htmlContent: string;
-  questionnaireName: string;
-  createdAt: string;
-}
-
-interface Questionnaire {
-  id: string;
-  name: string;
-  status: string;
-}
 
 const InvitationManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('batches');
   const [batches, setBatches] = useState<InvitationBatch[]>([]);
   const [templates, setTemplates] = useState<InvitationTemplate[]>([]);
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
+  
   const [selectedBatch, setSelectedBatch] = useState<InvitationBatch | null>(null);
-  const [showCreateBatch, setShowCreateBatch] = useState(false);
-  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
+  
+  const [selectedTemplate, setSelectedTemplate] = useState<InvitationTemplate|null>(null);
+    const [batchesSearchTerm, setBatchesSearchTerm] = useState('');
+  const [templatesSearchTerm, setTemplatesSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // Mock data για demonstration
   useEffect(() => {
-    const mockBatches: InvitationBatch[] = [
-      {
-        id: '1',
-        name: 'Γεωργική Έρευνα Λευκωσίας - Φάση Α',
-        questionnaireName: 'Γεωργική Παραγωγή 2025',
-        totalInvitations: 150,
-        deliveredInvitations: 142,
-        failedInvitations: 8,
-        openedInvitations: 98,
-        clickedInvitations: 76,
-        startedResponses: 65,
-        completedResponses: 52,
-        status: 'completed',
-        sentAt: '2025-01-15T10:00:00Z',
-        createdAt: '2025-01-14T14:30:00Z',
-        participationRate: 43.3,
-        completionRate: 80.0,
-        deliveryRate: 94.7
-      },
-      {
-        id: '2',
-        name: 'Βιολογική Καλλιέργεια - Έρευνα Αγροτών',
-        questionnaireName: 'Οργανική Γεωργία',
-        totalInvitations: 80,
-        deliveredInvitations: 75,
-        failedInvitations: 5,
-        openedInvitations: 45,
-        clickedInvitations: 32,
-        startedResponses: 28,
-        completedResponses: 15,
-        status: 'sent',
-        sentAt: '2025-01-18T09:00:00Z',
-        createdAt: '2025-01-17T16:00:00Z',
-        participationRate: 35.0,
-        completionRate: 53.6,
-        deliveryRate: 93.8
-      },
-      {
-        id: '3',
-        name: 'Καλλιέργεια Εσπεριδοειδών - Πάφος',
-        questionnaireName: 'Εσπεριδοειδή & Φρούτα',
-        totalInvitations: 120,
-        deliveredInvitations: 0,
-        failedInvitations: 0,
-        openedInvitations: 0,
-        clickedInvitations: 0,
-        startedResponses: 0,
-        completedResponses: 0,
-        status: 'scheduled',
-        scheduledSendTime: '2025-01-25T08:00:00Z',
-        createdAt: '2025-01-20T11:00:00Z',
-        participationRate: 0,
-        completionRate: 0,
-        deliveryRate: 0
-      },
-      {
-        id: '4',
-        name: 'Κτηνοτροφία - Εθνική Έρευνα',
-        questionnaireName: 'Κτηνοτροφία & Ζωική Παραγωγή',
-        totalInvitations: 200,
-        deliveredInvitations: 0,
-        failedInvitations: 0,
-        openedInvitations: 0,
-        clickedInvitations: 0,
-        startedResponses: 0,
-        completedResponses: 0,
-        status: 'draft',
-        createdAt: '2025-01-22T10:15:00Z',
-        participationRate: 0,
-        completionRate: 0,
-        deliveryRate: 0
-      }
-    ];
+    const fetchData = async ()=> {
+      setLoading(true);
+      await Promise.all([
+        fetchQuestionnaires(),
+        fetchBatches(),
+        fetchTemplates()
+      ]);
+      setLoading(false);
+    }
 
-    const mockTemplates: InvitationTemplate[] = [
-      {
-        id: '1',
-        name: 'Πρότυπο Γεωργικής Έρευνας',
-        subject: 'Πρόσκληση συμμετοχής σε έρευνα - Υπουργείο Γεωργίας',
-        htmlContent: '<h2>Αγαπητέ Αγρότη,</h2><p>Σας προσκαλούμε να συμμετάσχετε στην έρευνά μας...</p>',
-        questionnaireName: 'Γεωργική Παραγωγή 2025',
-        createdAt: '2025-01-10T12:00:00Z'
-      },
-      {
-        id: '2',
-        name: 'Πρότυπο Βιολογικής Γεωργίας',
-        subject: 'Έρευνα Βιολογικής Καλλιέργειας - Η γνώμη σας μετράει',
-        htmlContent: '<h2>Καλημέρα,</h2><p>Συμμετάσχετε στην έρευνά μας για τη βιολογική γεωργία...</p>',
-        questionnaireName: 'Οργανική Γεωργία',
-        createdAt: '2025-01-12T15:30:00Z'
-      }
-    ];
-
-    const mockQuestionnaires: Questionnaire[] = [
-      { id: '1', name: 'Γεωργική Παραγωγή 2025', status: 'active' },
-      { id: '2', name: 'Οργανική Γεωργία', status: 'active' },
-      { id: '3', name: 'Εσπεριδοειδή & Φρούτα', status: 'active' },
-      { id: '4', name: 'Κτηνοτροφία & Ζωική Παραγωγή', status: 'draft' }
-    ];
-
-    setBatches(mockBatches);
-    setTemplates(mockTemplates);
-    setQuestionnaires(mockQuestionnaires);
-    setLoading(false);
+    fetchData();
   }, []);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="outline" className="text-gray-600">Πρόχειρο</Badge>;
-      case 'scheduled':
-        return <Badge variant="outline" className="text-blue-600">Προγραμματισμένο</Badge>;
-      case 'sending':
-        return <Badge variant="outline" className="text-yellow-600">Αποστολή</Badge>;
-      case 'sent':
-        return <Badge variant="outline" className="text-green-600">Στάλθηκε</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="text-purple-600">Ολοκληρώθηκε</Badge>;
-      default:
-        return <Badge variant="outline">Άγνωστο</Badge>;
-    }
+  const fetchQuestionnaires = async () => {
+      var questionnaires = await QuestionnaireService.getQuestionnaires();
+      setQuestionnaires(questionnaires.data);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('el-GR', {
+  const fetchBatches = async () => {
+    var batches = await QuestionnaireService.getInvitationBatches();
+    setBatches(batches.map(b=>{
+      b.recipientFarmIds = JSON.parse(b.serializedFarmIds ?? '');
+      return b;
+    }));
+  };
+
+  const fetchTemplates = async ()=> {
+    var templates = await QuestionnaireService.GetInvitationTemplates();
+    setTemplates(templates);
+  }
+
+  // Logo upload handlers for templates (same behavior as ThemesPage)
+  const handleTemplateLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Το αρχείο είναι πολύ μεγάλο. Μέγιστο μέγεθος: 2MB');
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert('Παρακαλώ επιλέξτε ένα αρχείο εικόνας');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setSelectedTemplate((prev) => {
+        if (!prev) return prev;
+        return { ...prev, logoImageBase64: e.target?.result as string };
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveTemplateLogo = () => {
+    setSelectedTemplate((prev) => (prev ? ({ ...prev, logoImageBase64: '' }) : prev));
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('el-GR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -208,10 +118,16 @@ const InvitationManagementPage: React.FC = () => {
   };
 
   const filteredBatches = batches.filter(batch => {
-    const matchesSearch = batch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         batch.questionnaireName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || batch.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSearch = batch.name.toLowerCase().includes(batchesSearchTerm.toLowerCase()) ||
+                        batch.templateName.toLowerCase().includes(batchesSearchTerm.toLowerCase()) ||
+                         batch.questionnaireName.toLowerCase().includes(batchesSearchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(templatesSearchTerm.toLowerCase()) ||
+                         template.questionnaireName.toLowerCase().includes(templatesSearchTerm.toLowerCase());
+    return matchesSearch;
   });
 
   const BatchAnalytics: React.FC<{ batch: InvitationBatch }> = ({ batch }) => {
@@ -418,6 +334,35 @@ const InvitationManagementPage: React.FC = () => {
     );
   };
 
+  const dynamicVariables : Record<string, string> = {
+    INTERVIEWEE_COMPANY: "Γεωργικές εκμεταλλεύσεις ΚΥΠΡΟΥ Α.Ε.",
+    INTERVIEWEE_CODE: "CY2399",
+    QUESTIONNAIRE_NAME: "Αξιολόγηση Γεωργικής πολιτικής 2024",
+    SAMPLE_NAME: "Δείγμα Λάρνακας / μικρές εκμεταλλεύσεις",
+    INTERVIEWER_NAME: "Γεώργιος Σοφιανός",
+    INTERVIEWER_ORGANIZATION: "Υπουργείο Γεωργίας, Διεύθυνση Πληροφορικής"
+  }
+
+  // Generate HTML preview with dynamic variable substitution and logo
+  const generateHtmlPreview = () => {
+    let html = selectedTemplate?.htmlContent || '';
+    
+    // Replace dynamic variables with their values
+    Object.entries(dynamicVariables).forEach(([key, value]) => {
+      const pattern = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      html = html.replace(pattern, value);
+    });
+
+    // Insert logo at the top if present
+    if (selectedTemplate?.logoImageBase64) {
+      const logoAlignment = selectedTemplate.logoAlignment || 'left';
+      const logoHtml = `<div style="text-align: ${logoAlignment}; margin-bottom: 20px;"><div style="display:inline-block;width:fit-content"><img src="${selectedTemplate.logoImageBase64}" alt="Logo" style="max-height: 100px; object-fit: contain;" /></div></div>`;
+      html = logoHtml + html;
+    }
+
+    return html;
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
@@ -442,29 +387,16 @@ const InvitationManagementPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Αναζήτηση παρτίδων..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={batchesSearchTerm}
+                  onChange={(e) => setBatchesSearchTerm(e.target.value)}
                   className="pl-10"
                 />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Φίλτρο κατάστασης" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Όλες οι καταστάσεις</SelectItem>
-                  <SelectItem value="draft">Πρόχειρο</SelectItem>
-                  <SelectItem value="scheduled">Προγραμματισμένο</SelectItem>
-                  <SelectItem value="sent">Στάλθηκε</SelectItem>
-                  <SelectItem value="completed">Ολοκληρώθηκε</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-            <Button onClick={() => setShowCreateBatch(true)} className="flex items-center gap-2">
+            <Button onClick={() => setSelectedBatch({} as InvitationBatch)} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Νέα Παρτίδα
             </Button>
@@ -492,34 +424,21 @@ const InvitationManagementPage: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="font-semibold text-lg text-gray-900">{batch.name}</h3>
-                          {getStatusBadge(batch.status)}
                         </div>
                         <p className="text-gray-600 mb-2">{batch.questionnaireName}</p>
                         
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-gray-500">Σύνολο:</span>
-                            <span className="ml-2 font-medium">{batch.totalInvitations}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Παράδοση:</span>
-                            <span className="ml-2 font-medium text-green-600">{batch.deliveryRate.toFixed(1)}%</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Συμμετοχή:</span>
-                            <span className="ml-2 font-medium text-blue-600">{batch.participationRate.toFixed(1)}%</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Ολοκλήρωση:</span>
-                            <span className="ml-2 font-medium text-purple-600">{batch.completionRate.toFixed(1)}%</span>
+                            <span className="ml-2 font-medium">{(batch.recipientFarmIds??[]).length}</span>
                           </div>
                         </div>
                         
                         <div className="mt-3 text-sm text-gray-500">
-                          {batch.status === 'scheduled' && batch.scheduledSendTime && (
+                          {batch.scheduledAt && (
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4" />
-                              Προγραμματισμένο: {formatDate(batch.scheduledSendTime)}
+                              Προγραμματισμένο: {formatDate(batch.scheduledAt)}
                             </div>
                           )}
                           {batch.sentAt && (
@@ -528,7 +447,6 @@ const InvitationManagementPage: React.FC = () => {
                               Στάλθηκε: {formatDate(batch.sentAt)}
                             </div>
                           )}
-                          <div>Δημιουργήθηκε: {formatDate(batch.createdAt)}</div>
                         </div>
                       </div>
                       
@@ -542,13 +460,13 @@ const InvitationManagementPage: React.FC = () => {
                           <Eye className="h-4 w-4" />
                           Προεπισκόπηση
                         </Button>
-                        {batch.status === 'draft' && (
+                        {!batch.sentAt && (
                           <Button
                             size="sm"
                             className="flex items-center gap-2"
                           >
                             <Send className="h-4 w-4" />
-                            Αποστολή
+                            Αποστολή τώρα
                           </Button>
                         )}
                       </div>
@@ -562,27 +480,42 @@ const InvitationManagementPage: React.FC = () => {
 
         <TabsContent value="templates" className="space-y-6">
           {/* Templates Controls */}
-          <div className="flex items-center justify-between">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Αναζήτηση προτύπων..."
-                className="pl-10"
-              />
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Input
+                  placeholder="Αναζήτηση προτύπων..."
+                  onChange={(e) => setTemplatesSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              </div>
             </div>
-            <Button onClick={() => setShowCreateTemplate(true)} className="flex items-center gap-2">
+            <Button onClick={() => setSelectedTemplate({} as InvitationTemplate)} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Νέο Πρότυπο
             </Button>
           </div>
 
           {/* Templates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {templates.map((template) => (
+          <div className="grid gap-4">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Φόρτωση...</p>
+              </div>
+            ) : filteredTemplates.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">Δεν βρέθηκαν πρότυπα</p>
+                </CardContent>
+              </Card>
+            ) : filteredTemplates.map((template) => (
               <Card key={template.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-lg">{template.name}</CardTitle>
-                  <CardDescription>{template.questionnaireName}</CardDescription>
+                  <CardDescription>Ερωτηματολόγιο: {template.questionnaireName}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -590,25 +523,26 @@ const InvitationManagementPage: React.FC = () => {
                       <span className="text-sm font-medium text-gray-600">Θέμα:</span>
                       <p className="text-sm text-gray-800">{template.subject}</p>
                     </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Δημιουργήθηκε:</span>
-                      <p className="text-sm text-gray-800">{formatDate(template.createdAt)}</p>
-                    </div>
                   </div>
                   <div className="flex gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={()=>setSelectedTemplate(template)}>
                       <Settings className="h-4 w-4 mr-2" />
                       Επεξεργασία
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Προεπισκόπηση
+                    <Button variant="outline" size="sm" className="flex-1" onClick={async ()=>{
+                      await QuestionnaireService.DeleteInvitationTemplate(template.id);
+                      fetchTemplates();
+                    }}>
+                      <Delete className="h-4 w-4 mr-2" />
+                      Διαγραφή
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            ))
+          }
           </div>
+          
         </TabsContent>
       </Tabs>
 
@@ -640,9 +574,9 @@ const InvitationManagementPage: React.FC = () => {
       )}
 
       {/* Create Batch Dialog */}
-      {showCreateBatch && (
-        <Dialog open={showCreateBatch} onOpenChange={setShowCreateBatch}>
-          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white">
+      {selectedBatch && (
+        <Dialog open={selectedBatch} onOpenChange={()=>setSelectedBatch(null)}>
+          <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto bg-white p-6 rounded-xl shadow-lg !max-w-[1400px]" style={{ width: 'min(1400px, 96vw)' }}>
             <DialogHeader className="bg-white pb-4">
               <DialogTitle className="text-2xl font-bold text-gray-900">Δημιουργία Νέας Παρτίδας Προσκλήσεων</DialogTitle>
               <DialogDescription className="text-gray-600">
@@ -724,7 +658,7 @@ const InvitationManagementPage: React.FC = () => {
               
               <div className="flex gap-3 pt-6 border-t bg-white">
                 <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">Δημιουργία Παρτίδας</Button>
-                <Button variant="outline" onClick={() => setShowCreateBatch(false)} className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50">Ακύρωση</Button>
+                <Button variant="outline" onClick={() => setSelectedBatch(null)} className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50">Ακύρωση</Button>
               </div>
             </div>
           </DialogContent>
@@ -732,9 +666,9 @@ const InvitationManagementPage: React.FC = () => {
       )}
 
       {/* Create Template Dialog */}
-      {showCreateTemplate && (
-        <Dialog open={showCreateTemplate} onOpenChange={setShowCreateTemplate}>
-          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto bg-white">
+      {selectedTemplate && (
+        <Dialog open={selectedTemplate} onOpenChange={()=>setSelectedTemplate(null)}>
+          <DialogContent className="max-w-7xl w-full max-h-[90vh] overflow-y-auto bg-white p-6 rounded-xl shadow-lg !max-w-[1400px]" style={{ width: 'min(1400px, 96vw)' }}>
             <DialogHeader className="bg-white pb-4">
               <DialogTitle className="text-2xl font-bold text-gray-900">Δημιουργία Νέου Προτύπου Πρόσκλησης</DialogTitle>
               <DialogDescription className="text-gray-600">
@@ -750,6 +684,8 @@ const InvitationManagementPage: React.FC = () => {
                       id="template-name" 
                       placeholder="π.χ. Πρότυπο Γεωργικής Έρευνας" 
                       className="mt-2 bg-white border-gray-300"
+                      value={selectedTemplate.name}
+                      onChange={(e)=>setSelectedTemplate({...selectedTemplate, name:e.target.value})}
                     />
                   </div>
                   <div>
@@ -758,11 +694,14 @@ const InvitationManagementPage: React.FC = () => {
                       id="subject" 
                       placeholder="π.χ. Πρόσκληση συμμετοχής σε έρευνα - Υπουργείο Γεωργίας" 
                       className="mt-2 bg-white border-gray-300"
+                      value={selectedTemplate.subject}
+                      onChange={(e)=>setSelectedTemplate({...selectedTemplate, subject:e.target.value})}
                     />
                   </div>
                   <div>
                     <Label htmlFor="questionnaire-select" className="text-base font-medium text-gray-700">Συσχετισμένο Ερωτηματολόγιο</Label>
-                    <Select>
+                    <Select value={selectedTemplate.questionnaireId} 
+                      onValueChange={(newQuestionnaireId:string) => setSelectedTemplate({...selectedTemplate, questionnaireId:newQuestionnaireId})}>
                       <SelectTrigger className="mt-2 bg-white border-gray-300">
                         <SelectValue placeholder="Επιλέξτε ερωτηματολόγιο" />
                       </SelectTrigger>
@@ -773,20 +712,69 @@ const InvitationManagementPage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Logo Upload (same control as ThemesPage.tsx) */}
+                  <div className="space-y-2">
+                    <Label className="text-base font-medium text-gray-700">Λογότυπο</Label>
+                    {selectedTemplate.logoImageBase64 ? (
+                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-shrink-0">
+                            <img src={selectedTemplate.logoImageBase64} alt="logo preview" className="h-24 object-contain" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600">Επιλεγμένο λογότυπο</p>
+                            <div className="mt-3 flex gap-2">
+                              <Button variant="outline" onClick={handleRemoveTemplateLogo} className="gap-2">Αφαίρεση</Button>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleTemplateLogoUpload}
+                                className="mt-0 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-gray-400 transition-colors">
+                        <p className="text-gray-600">Ανεβάστε λογότυπο (μέγιστο 2MB)</p>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleTemplateLogoUpload}
+                          className="mt-2 cursor-pointer mx-auto"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="logo-alighment-select" className="text-base font-medium text-gray-700">Θέση λογότυπου</Label>
+                    <Select value={selectedTemplate.logoAlignment}  name="logo-alighment-select"
+                      onValueChange={(newLogoAlighment:string) => setSelectedTemplate({...selectedTemplate, logoAlignment:newLogoAlighment})}>
+                      <SelectTrigger className="mt-2 bg-white border-gray-300">
+                        <SelectValue placeholder="Επιλέξτε θέση" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem key={'left'} value={'left'} className="bg-white hover:bg-gray-50">Αριστερά</SelectItem>
+                        <SelectItem key={'center'} value={'center'} className="bg-white hover:bg-gray-50">Κέντρο</SelectItem>
+                        <SelectItem key={'right'} value={'right'} className="bg-white hover:bg-gray-50">Δεξιά</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base font-medium text-gray-700">Προεπισκόπηση</Label>
+                    <Label className="text-base font-medium text-gray-700">Προεπισκόπηση HTML</Label>
                     <div className="mt-2 p-4 border border-gray-300 rounded-lg bg-gray-50 min-h-[200px]">
                       <div className="text-sm text-gray-600">
                         <p><strong>Από:</strong> noreply@agriculture.gov.cy</p>
                         <p><strong>Προς:</strong> recipient@example.com</p>
-                        <p><strong>Θέμα:</strong> <span className="text-blue-600">Πρόσκληση συμμετοχής σε έρευνα</span></p>
+                        <p><strong>Θέμα:</strong> {selectedTemplate.subject ?? 'Συμπληρώστε θέμα'}</p>
                         <hr className="my-3 border-gray-300" />
-                        <div className="bg-white p-3 rounded text-gray-800">
-                          <p>Η προεπισκόπηση του email θα εμφανιστεί εδώ...</p>
-                        </div>
+                        <div id="htmlPreview" className="bg-white p-3 rounded text-gray-800" dangerouslySetInnerHTML={{ __html: generateHtmlPreview() }} />
                       </div>
                     </div>
                   </div>
@@ -794,28 +782,50 @@ const InvitationManagementPage: React.FC = () => {
               </div>
               
               <div className="border-t pt-4">
-                <Label htmlFor="content" className="text-base font-medium text-gray-700">Περιεχόμενο HTML Email</Label>
+                <Label className="text-base font-medium text-gray-700">HTML περιεχόμενο Email</Label>
+                <Editor
+                  apiKey="lxy6lg6tj8fzust6vr98ca9v3qqb8bubzjtykaf16bmzohhp"
+                  
+                  init={{
+                    plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
+                    toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help | link image media | table',
+                    height: 400,
+                    menu: {
+                      favs: { title: 'My Favorites', items: 'bold italic underline delimiters | outdent indent' }
+                    },
+                    menubar: 'file edit view insert format tools table help',
+                    content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+                  }}
+                  value={selectedTemplate.htmlContent}
+                  onEditorChange={(content) => setSelectedTemplate({...selectedTemplate, htmlContent: content})}
+                />
+
+                <Label htmlFor="plainTextContent" className="text-base font-medium text-gray-700">Plain text περιεχόμενο Email</Label>
                 <Textarea
-                  id="content"
+                  name="plainTextContent"
+                  id="plainTextContent"
+                  value={selectedTemplate.plainTextContent}
+                  onChange={(e)=>setSelectedTemplate({...selectedTemplate, plainTextContent:e.target.value})}
                   rows={12}
-                  placeholder="<h2>Αγαπητέ Αγρότη,</h2>&#10;<p>Σας προσκαλούμε να συμμετάσχετε στην έρευνά μας για τη γεωργική παραγωγή της Κύπρου.</p>&#10;<p>Η συμμετοχή σας είναι εθελοντική και τα στοιχεία σας θα παραμείνουν εμπιστευτικά.</p>&#10;<p>Για να συμμετάσχετε, κάντε κλικ στον παρακάτω σύνδεσμο:</p>&#10;<a href='{{SURVEY_LINK}}' style='background-color: #004B87; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;'>Συμμετοχή στην Έρευνα</a>&#10;<p>Σας ευχαριστούμε για τον χρόνο σας!</p>&#10;<p>Με εκτίμηση,<br>Υπουργείο Γεωργίας, Αγροτικής Ανάπτυξης και Περιβάλλοντος</p>"
+                  placeholder="Συμπληρώστε απλό κείμενο"
                   className="mt-2 bg-white border-gray-300 font-mono text-sm"
                 />
                 <div className="mt-2 text-sm text-gray-500">
                   <p><strong>Διαθέσιμες μεταβλητές:</strong></p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">{'{{RECIPIENT_NAME}}'}</code>
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">{'{{SURVEY_LINK}}'}</code>
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">{'{{SURVEY_TITLE}}'}</code>
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">{'{{EXPIRY_DATE}}'}</code>
+                    {Object.keys(dynamicVariables).map(dv=> <code key={dv} className="bg-gray-100 px-2 py-1 rounded text-xs" title={'π.χ.: ' + dynamicVariables[dv]}>{'{{' + dv + '}}'}</code>)}
                   </div>
                 </div>
               </div>
               
               <div className="flex gap-3 pt-6 border-t bg-white">
-                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">Δημιουργία Προτύπου</Button>
-                <Button variant="outline" className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50">Προεπισκόπηση</Button>
-                <Button variant="outline" onClick={() => setShowCreateTemplate(false)} className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50">Ακύρωση</Button>
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" onClick={ async () => {
+                  if (selectedTemplate.id) await QuestionnaireService.UpdateInvitationTemplate(selectedTemplate.id, selectedTemplate);
+                  else await QuestionnaireService.CreateInvitationTemplate(selectedTemplate);
+                  setSelectedTemplate(null);
+                  fetchTemplates();
+                }}>Αποθήκευση</Button>
+                <Button variant="outline" onClick={() => setSelectedTemplate(null)} className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50">Ακύρωση</Button>
               </div>
             </div>
           </DialogContent>

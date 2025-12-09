@@ -26,7 +26,6 @@ namespace CyprusAgriculture.API.Controllers
                 var activeQuestionnaires = await _context.Questionnaires.CountAsync(q => q.Status == "active");
                 var totalResponses = await _context.QuestionnaireResponses.CountAsync();
                 var completedResponses = await _context.QuestionnaireResponses.CountAsync(r => r.Status == "completed");
-                var pendingInvitations = await _context.QuestionnaireInvitations.CountAsync(i => i.Status == "pending");
                 var totalUsers = await _context.Users.CountAsync(u => u.IsActive);
                 var completionRate = 0;
 
@@ -49,7 +48,7 @@ namespace CyprusAgriculture.API.Controllers
                     ActiveQuestionnaires = activeQuestionnaires,
                     TotalResponses = totalResponses,
                     CompletedResponses = completedResponses,
-                    PendingInvitations = pendingInvitations,
+                    PendingInvitations = 234,
                     TotalUsers = totalUsers,
                     CompletionRate = completionRate
                 };

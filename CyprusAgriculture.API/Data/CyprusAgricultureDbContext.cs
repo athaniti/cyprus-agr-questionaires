@@ -26,14 +26,11 @@ namespace CyprusAgriculture.API.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Questionnaire> Questionnaires { get; set; }
         public DbSet<QuestionnaireResponse> QuestionnaireResponses { get; set; }
-        public DbSet<QuestionnaireInvitation> QuestionnaireInvitations { get; set; }
-        public DbSet<QuestionnaireQuota> QuestionnaireQuotas { get; set; }
         public DbSet<Location> Locations { get; set; }
         public DbSet<Farm> Farms { get; set; }
         public DbSet<Sample> Samples { get; set; }
         public DbSet<SampleParticipant> SampleParticipants { get; set; }
         public DbSet<SampleGroup> SampleGroups { get; set; }
-        public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Theme> Themes { get; set; }
         
         // New invitation management entities
@@ -96,34 +93,7 @@ namespace CyprusAgriculture.API.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure QuestionnaireInvitation entity
-            modelBuilder.Entity<QuestionnaireInvitation>(entity =>
-            {
-                entity.ToTable("questionnaire_invitations");
-                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-                
-                entity.HasOne(qi => qi.Questionnaire)
-                    .WithMany(q => q.Invitations)
-                    .HasForeignKey(qi => qi.QuestionnaireId)
-                    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(qi => qi.User)
-                    .WithMany(u => u.Invitations)
-                    .HasForeignKey(qi => qi.UserId)
-                    .OnDelete(DeleteBehavior.Restrict);
-            });
-
-            // Configure QuestionnaireQuota entity
-            modelBuilder.Entity<QuestionnaireQuota>(entity =>
-            {
-                entity.ToTable("questionnaire_quotas");
-                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-                
-                entity.HasOne(qq => qq.Questionnaire)
-                    .WithMany(q => q.Quotas)
-                    .HasForeignKey(qq => qq.QuestionnaireId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
 
             // Configure Location entity
             modelBuilder.Entity<Location>(entity =>
@@ -213,41 +183,7 @@ namespace CyprusAgriculture.API.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Configure Invitation entity
-            modelBuilder.Entity<Invitation>(entity =>
-            {
-                entity.ToTable("invitations");
-                entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
-
-                entity.HasOne(i => i.Batch)
-                    .WithMany(b => b.Invitations)
-                    .HasForeignKey(i => i.BatchId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne(i => i.Sample)
-                    .WithMany(s => s.Invitations)
-                    .HasForeignKey(i => i.SampleId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(i => i.Questionnaire)
-                    .WithMany()
-                    .HasForeignKey(i => i.QuestionnaireId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(i => i.Participant)
-                    .WithMany(p => p.Invitations)
-                    .HasForeignKey(i => i.ParticipantId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne(i => i.Creator)
-                    .WithMany()
-                    .HasForeignKey(i => i.CreatedBy)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasIndex(i => i.Token).IsUnique();
-                entity.HasIndex(i => i.RecipientEmail);
-                entity.HasIndex(i => i.Status);
-            });
+            
 
             // Configure InvitationTemplate entity
             modelBuilder.Entity<InvitationTemplate>(entity =>
@@ -260,11 +196,6 @@ namespace CyprusAgriculture.API.Data
                     .HasForeignKey(it => it.QuestionnaireId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(it => it.Creator)
-                    .WithMany()
-                    .HasForeignKey(it => it.CreatedBy)
-                    .OnDelete(DeleteBehavior.Restrict);
-
                 entity.HasIndex(it => it.QuestionnaireId);
                 entity.HasIndex(it => it.Name);
             });
@@ -275,24 +206,10 @@ namespace CyprusAgriculture.API.Data
                 entity.ToTable("invitation_batches");
                 entity.Property(e => e.Id).HasDefaultValueSql("gen_random_uuid()");
 
-                entity.HasOne(ib => ib.Template)
+                entity.HasOne(ib => ib.InvitationTemplate)
                     .WithMany(t => t.InvitationBatches)
-                    .HasForeignKey(ib => ib.TemplateId)
+                    .HasForeignKey(ib => ib.InvitationTemplateId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(ib => ib.Questionnaire)
-                    .WithMany()
-                    .HasForeignKey(ib => ib.QuestionnaireId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(ib => ib.Creator)
-                    .WithMany()
-                    .HasForeignKey(ib => ib.CreatedBy)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasIndex(ib => ib.QuestionnaireId);
-                entity.HasIndex(ib => ib.Status);
-                entity.HasIndex(ib => ib.ScheduledSendTime);
             });
 
             // Configure Farm entity
