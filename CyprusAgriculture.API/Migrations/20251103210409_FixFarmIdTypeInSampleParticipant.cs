@@ -666,7 +666,7 @@ namespace CyprusAgriculture.API.Migrations
                         column: x => x.questionnaire_id,
                         principalTable: "questionnaires",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_samples_users_created_by",
                         column: x => x.created_by,

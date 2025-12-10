@@ -11,7 +11,7 @@ import { Questionnaire, QuestionnaireService } from '@/services/questionnaireSer
 export function SampleManagementPage() {
   const [samples, setSamples] = useState<Sample[]>([]);
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAssignmentPanel, setShowAssignmentPanel] = useState(false);
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
@@ -124,7 +124,6 @@ export function SampleManagementPage() {
 
   const handleViewSample = (sample: Sample) => {
     sample.filterCriteria = JSON.parse(sample.serializedFilterCriteria);
-    console.log(sample);
     setSelectedSample(sample);
     setShowDetailsModal(true);
   };
@@ -146,7 +145,7 @@ export function SampleManagementPage() {
     }
   };
 
-  const handleCreateSample = async (e: React.FormEvent) => {
+  const handleSaveSample = async (e: React.FormEvent) => {
     if (!selectedSample) return;
     e.preventDefault();
     
@@ -158,8 +157,9 @@ export function SampleManagementPage() {
       SerializedFilterCriteria : JSON.stringify(selectedSample.filterCriteria),
     } as Partial<Sample>;
 
-    await SamplesService.createSample(requestData);
-    setShowCreateModal(false);
+    if (selectedSample.id) await SamplesService.updateSample(selectedSample.id, requestData);
+    else  await SamplesService.createSample(requestData);
+    setShowEditModal(false);
     setSelectedSample(null);
     SamplesService.getSamples().then(samplesResponse=> {
       setSamples(samplesResponse);
@@ -216,7 +216,7 @@ export function SampleManagementPage() {
             setSelectedSample({
               filterCriteria: { },
             } as Sample);
-            setShowCreateModal(true);
+            setShowEditModal(true);
             
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -258,7 +258,11 @@ export function SampleManagementPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {samples.map((sample) => (
                 <tr key={sample.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap" style={{cursor:'pointer'}} onClick={()=>{
+                    sample.filterCriteria = JSON.parse(sample.serializedFilterCriteria);
+                    setSelectedSample(sample); 
+                    setShowEditModal(true);
+                  }}>
                     <div className="text-sm font-medium text-gray-900">{sample.name}</div>
                     <div className="text-sm text-gray-500">{sample.description}</div>
                   </td>
@@ -313,7 +317,7 @@ export function SampleManagementPage() {
                           setShowAssignmentPanel(true);
                         }}
                         className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50"
-                        title="🆕 ΝΕΑ ΟΘΟΝΗ: Τμηματοποίηση & Ανάθεση (Split UI)"
+                        title="Τμηματοποίηση & Ανάθεση"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -340,14 +344,14 @@ export function SampleManagementPage() {
       </div>
 
       {/* Create Sample Modal */}
-      {showCreateModal && (
+      {(showEditModal && selectedSample) && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-900">Δημιουργία Νέου Δείγματος</h3>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => setShowEditModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <span className="sr-only">Κλείσιμο</span>
@@ -357,7 +361,7 @@ export function SampleManagementPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateSample} className="space-y-6">
+              <form onSubmit={handleSaveSample} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Basic Information */}
                   <div className="space-y-4">
@@ -366,6 +370,7 @@ export function SampleManagementPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Ερωτηματολόγιο</label>
                       <select
+                        disabled={selectedSample!.id != undefined}
                         value={selectedSample!.questionnaireId}
                         onChange={(e) => setSelectedSample({...selectedSample!, questionnaireId: e.target.value})}
                         className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -514,7 +519,7 @@ export function SampleManagementPage() {
                 <div className="flex justify-end space-x-3 pt-6 border-t">
                   <button
                     type="button"
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => setShowEditModal(false)}
                     className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     Ακύρωση
@@ -523,7 +528,7 @@ export function SampleManagementPage() {
                     type="submit"
                     className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    Δημιουργία Δείγματος
+                    Αποθήκευση Δείγματος
                   </button>
                 </div>
               </form>
@@ -750,8 +755,7 @@ export function SampleManagementPage() {
       {/* Sample Assignment Panel */}
       {showAssignmentPanel && selectedSample && (
         <SampleAssignmentPanel
-          sampleId={selectedSample.id}
-          sampleName={selectedSample.name}
+          sample={selectedSample}
           onClose={() => {
             setShowAssignmentPanel(false);
             setSelectedSample(null);

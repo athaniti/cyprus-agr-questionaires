@@ -686,7 +686,7 @@ const InvitationManagementPage: React.FC = () => {
                                       {farm.farmType}
                                     </span>
                                     <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
-                                      {farm.totalArea} στρ.
+                                      {farm.sizeCategory}
                                     </span>
                                     {farm.economicSize && (
                                       <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">

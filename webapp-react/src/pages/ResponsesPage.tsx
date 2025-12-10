@@ -55,7 +55,7 @@ export default function ResponsesPage({language='el' }:ResponsesPageProps) {
           </h3>
         </div>} 
 
-        {(questionnaires && questionnaires!.length) && <><div className="bg-white rounded-lg shadow-sm mb-6">
+        {(questionnaires && questionnaires!.length >0) && <><div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8 px-6">
               <button

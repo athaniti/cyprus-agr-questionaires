@@ -1,15 +1,14 @@
-import { Farm, SampleGroup, SamplesService } from '@/services/samplesService';
+import { Farm, Sample, SampleGroup, SamplesService } from '@/services/samplesService';
 import { User, UsersService } from '@/services/usersService';
 import { useState, useEffect } from 'react';
 
 interface SampleAssignmentPanelProps {
-  sampleId: string;
-  sampleName: string;
+  sample: Sample;
   onClose: () => void;
   language: 'el' | 'en';
 }
 
-export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language }: SampleAssignmentPanelProps) {
+export function SampleAssignmentPanel({ sample, onClose, language }: SampleAssignmentPanelProps) {
   const [availableFarms, setAvailableFarms] = useState<Farm[]|undefined>(undefined);
   const [sampleGroups, setSampleGroups] = useState<SampleGroup[]|undefined>(undefined);
   const [availableInterviewers, setAvailableInterviewers] = useState<User[]|undefined>(undefined);
@@ -62,7 +61,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
 
   useEffect(() => {
     fetchData();
-  }, [sampleId]);
+  }, [sample]);
 
   const fetchAvailableInterviewers = async () => {
     var users = await UsersService.getUsers();
@@ -70,12 +69,12 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
   };
 
     const fetchAvailableFarms = async () => {
-      var farmsOfSample = await SamplesService.getSampleParticipants(sampleId);
+      var farmsOfSample = await SamplesService.getSampleParticipants(sample.id);
       setAvailableFarms(farmsOfSample);
   };
 
   const fetchSampleGroups = async () => {
-    var groupsOfSample = await SamplesService.getSampleGroups(sampleId);
+    var groupsOfSample = await SamplesService.getSampleGroups(sample.id);
     setSampleGroups( groupsOfSample.map(g=>{
       return {...g, criteria:JSON.parse(g.serizedCriteria??'{}'), farmIds:JSON.parse(g.serializedFarmIds??'[]')}
     }));
@@ -110,9 +109,9 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
 
     setIsCreatingGroup(true);
     if (selectedGroup.id) {
-      await SamplesService.updateSampleGroup(sampleId, selectedGroup.id, selectedGroup);
+      await SamplesService.updateSampleGroup(sample.id, selectedGroup.id, selectedGroup);
     } else {
-      await SamplesService.createSampleGroup(sampleId, selectedGroup);
+      await SamplesService.createSampleGroup(sample.id, selectedGroup);
     }
     
     setShowCreateEditGroupModal(false);
@@ -126,7 +125,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
     if (!selectedGroup) return;
     selectedGroup.farmIds = farmIds;
     selectedGroup.serializedFarmIds = JSON.stringify(farmIds);
-    await SamplesService.updateSampleGroup(sampleId, selectedGroup!.id, selectedGroup!);
+    await SamplesService.updateSampleGroup(sample.id, selectedGroup!.id, selectedGroup!);
     fetchSampleGroups();
   };
 
@@ -134,7 +133,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
     if (!selectedGroup) return;
     selectedGroup.farmIds = (selectedGroup.farmIds ?? []).filter(id => id !== farmId) 
     selectedGroup.serializedFarmIds = JSON.stringify(selectedGroup.farmIds);
-    await SamplesService.updateSampleGroup(sampleId, selectedGroup!.id, selectedGroup!);
+    await SamplesService.updateSampleGroup(sample.id, selectedGroup!.id, selectedGroup!);
     fetchSampleGroups();
     setSelectedFarms(selectedGroup.farmIds);
   };
@@ -147,6 +146,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
     if (filters.province && farm.province !== filters.province) return false;
     if (filters.farmType && farm.farmType !== filters.farmType) return false;
     if (filters.economicSize && farm.economicSize !== filters.economicSize) return false;
+    if (filters.sizeCategory && farm.sizeCategory !== filters.sizeCategory) return false;
     if (filters.searchTerm && !farm.ownerName.toLowerCase().includes(filters.searchTerm.toLowerCase()) &&
         !farm.farmCode.toLowerCase().includes(filters.searchTerm.toLowerCase())) return false;
     return true;
@@ -204,7 +204,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
               <h2 className="text-xl font-bold">
                 {language === 'el' ? 'Τμηματοποίηση & Ανάθεση Δείγματος' : 'Sample Segmentation & Assignment'}
               </h2>
-              <p className="text-blue-100 mt-1">{sampleName}</p>
+              <p className="text-blue-100 mt-1">{sample.name}</p>
             </div>
             <button
               onClick={onClose}
@@ -230,7 +230,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
                 <button
                   onClick={() => {
                     setShowCreateEditGroupModal(true);
-                    setSelectedGroup({} as SampleGroup);
+                    setSelectedGroup({interviewerId : "11111111-1111-1111-1111-111111111111"} as SampleGroup);
                   }}
                   className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700"
                 >
@@ -246,7 +246,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
                 </button>}
                 {selectedGroup &&<button
                   onClick={async() =>  {
-                    await SamplesService.deleteSampleGroup(sampleId, selectedGroup!.id);
+                    await SamplesService.deleteSampleGroup(sample.id, selectedGroup!.id);
                     setSelectedGroup(null);
                     setSelectedFarms([]);
                     fetchSampleGroups();
@@ -377,38 +377,53 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
 
               {/* Filters */}
               <div className="grid grid-cols-3 gap-3 mb-3">
-                <select
-                  value={filters.province}
-                  onChange={(e) => setFilters(prev => ({ ...prev, province: e.target.value }))}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1"
-                >
-                  <option value="">{language === 'el' ? 'Όλες οι επαρχίες' : 'All provinces'}</option>
-                  {cyprusData.provinces.map(province => (
-                    <option key={province} value={province}>{province}</option>
-                  ))}
-                </select>
+                {(sample.filterCriteria.provinces && sample.filterCriteria.provinces.length > 0) &&
+                  <select
+                    value={filters.province}
+                    onChange={(e) => setFilters(prev => ({ ...prev, province: e.target.value }))}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                  >
+                    <option value="">{language === 'el' ? 'Όλες οι επαρχίες' : 'All provinces'}</option>
+                    {cyprusData.provinces.map(province => (
+                      <option key={province} value={province}>{province}</option>
+                    ))}
+                  </select>}
 
-                <select
-                  value={filters.farmType}
-                  onChange={(e) => setFilters(prev => ({ ...prev, farmType: e.target.value }))}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1"
-                >
-                  <option value="">{language === 'el' ? 'Όλοι οι τύποι' : 'All types'}</option>
-                  {cyprusData.farmTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
+                {(sample.filterCriteria.farmTypes && sample.filterCriteria.farmTypes.length > 0) &&
+                  <select
+                    value={filters.farmType}
+                    onChange={(e) => setFilters(prev => ({ ...prev, farmType: e.target.value }))}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                  >
+                    <option value="">{language === 'el' ? 'Όλοι οι τύποι' : 'All types'}</option>
+                    {cyprusData.farmTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>}
 
-                <select
-                  value={filters.economicSize}
-                  onChange={(e) => setFilters(prev => ({ ...prev, economicSize: e.target.value }))}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1"
-                >
-                  <option value="">{language === 'el' ? 'Όλα τα μεγέθη' : 'All sizes'}</option>
-                  {cyprusData.economicSizes.map(size => (
-                    <option key={size} value={size}>{size}</option>
-                  ))}
-                </select>
+                {(sample.filterCriteria.sizeCategories && sample.filterCriteria.sizeCategories.length > 0) &&
+                  <select
+                    value={filters.sizeCategory}
+                    onChange={(e) => setFilters(prev => ({ ...prev, sizeCategory: e.target.value }))}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                  >
+                    <option value="">{language === 'el' ? 'Όλα τα μεγέθη' : 'All sizes'}</option>
+                    {cyprusData.sizeCategories.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>}
+
+                {(sample.filterCriteria.economicSizes && sample.filterCriteria.economicSizes.length > 0) &&
+                  <select
+                    value={filters.economicSize}
+                    onChange={(e) => setFilters(prev => ({ ...prev, economicSize: e.target.value }))}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                  >
+                    <option value="">{language === 'el' ? 'Όλα τα οικ. μεγέθη' : 'All sizes'}</option>
+                    {cyprusData.economicSizes.map(size => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>}
               </div>
 
               <input
@@ -499,7 +514,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
                             {farm.farmType}
                           </span>
                           <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
-                            {farm.totalArea} στρ.
+                            {farm.sizeCategory}
                           </span>
                           {farm.economicSize && (
                             <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">
@@ -606,7 +621,7 @@ export function SampleAssignmentPanel({ sampleId, sampleName, onClose, language 
               </button>
               <button
                 onClick={createEditGroup}
-                disabled={isCreatingGroup || !selectedGroup || !selectedGroup!.interviewerId}
+                disabled={isCreatingGroup || !selectedGroup || !selectedGroup.name || !selectedGroup!.interviewerId}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isCreatingGroup ? (

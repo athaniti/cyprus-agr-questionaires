@@ -91,7 +91,7 @@ namespace CyprusAgriculture.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<object>> CreateSample([FromBody] CreateSampleRequest request)
+        public async Task<ActionResult<object>> CreateSample([FromBody] CreateOrUpdateSampleRequest request)
         {
             var userId = _context.Users.First().Id;
             var questionnaire = await _context.Questionnaires.FindAsync(request.QuestionnaireId);
@@ -116,6 +116,55 @@ namespace CyprusAgriculture.API.Controllers
                 await _context.SaveChangesAsync();
 
                 return CreatedAtAction(nameof(GetSample), new { id = sample.Id }, new
+                    {
+                        sample.Id,
+                        sample.Name,
+                        sample.Description,
+                        sample.TargetSize,
+                        sample.CreatedAt,
+                        sample.CreatedBy,
+                        sample.QuestionnaireId,
+                        Questionnaire = sample.Questionnaire != null ? new
+                        {
+                            sample.Questionnaire.Id,
+                            sample.Questionnaire.Name
+                        } : null,
+                        SerializedFilterCriteria = sample.FilterCriteria,
+                        ParticipantsCount = sample.Participants.Count,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating sample");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPut("{sampleId}")]
+        public async Task<ActionResult<object>> UpdateSample(Guid sampleId, [FromBody] CreateOrUpdateSampleRequest request)
+        {
+            var questionnaire = await _context.Questionnaires.FindAsync(request.QuestionnaireId);
+            if (questionnaire == null)
+            {
+                return NotFound(new { success = false, message = "Invalid QuestionnaireId" });
+            }
+            var sample = await _context.Samples.FindAsync(sampleId);
+            if (sample == null)
+            {
+                return NotFound(new { success = false, message = "Sample not found" });
+            }
+            try
+            {
+                sample.Name = request.Name;
+                sample.Description = request.Description;
+                sample.TargetSize = request.TargetSize;
+                sample.FilterCriteria = request.SerializedFilterCriteria;
+                sample.UpdatedAt = DateTime.UtcNow;
+                          
+                await _context.SaveChangesAsync();
+
+                return Ok(new
                     {
                         sample.Id,
                         sample.Name,
@@ -263,6 +312,7 @@ namespace CyprusAgriculture.API.Controllers
                         sp.Farm.MainCrops,
                         sp.Farm.LivestockTypes,
                         sp.Farm.LegalStatus,
+                        sp.Farm.SizeCategory,
                         sp.CreatedAt
                     })
                     .ToListAsync();
@@ -334,7 +384,7 @@ namespace CyprusAgriculture.API.Controllers
                 };               
                 _context.SampleGroups.Add(sampleGroup);
                 await _context.SaveChangesAsync();
-
+                sampleGroup = await _context.SampleGroups.Include(sg=>sg.Sample).ThenInclude(s=>s.Questionnaire).FirstAsync(sg=>sg.Id == sampleGroup.Id);
                 return CreatedAtAction(nameof(GetSample), new { id = sample.Id }, new
                     {
                         sampleGroup.Id,
@@ -361,7 +411,7 @@ namespace CyprusAgriculture.API.Controllers
         [HttpPut("{sampleId}/sample-groups/{id}")]
         public async Task<ActionResult<object>> UpdateSampleGroup(Guid sampleId, Guid id, SampleGroupRequest request)
         {
-            var sampleGroup = await _context.SampleGroups.FindAsync(id);
+            var sampleGroup = await _context.SampleGroups.Include(sg=>sg.Sample).ThenInclude(s=>s.Questionnaire).FirstOrDefaultAsync(sg => sg.Id == id);
             if (sampleGroup == null)
             {
                 return NotFound(new { success = false, message = "Invalid Sample Group" });
@@ -450,6 +500,16 @@ namespace CyprusAgriculture.API.Controllers
                 query = query.Where(f => criteria.FarmTypes.Contains(f.FarmType));
             }
 
+            if (criteria.EconomicSizes?.Any() == true)
+            {
+                query = query.Where(f => criteria.EconomicSizes.Contains(f.EconomicSize ?? ""));
+            }
+
+            if (criteria.SizeCategories?.Any() == true)
+            {
+                query = query.Where(f => criteria.SizeCategories.Contains(f.SizeCategory ?? ""));
+            }
+
             return await query.ToListAsync();
         }
 
@@ -465,7 +525,7 @@ namespace CyprusAgriculture.API.Controllers
         }
     }
 
-    public class CreateSampleRequest
+    public class CreateOrUpdateSampleRequest
     {
         public Guid QuestionnaireId { get; set; }
         public string Name { get; set; } = string.Empty;

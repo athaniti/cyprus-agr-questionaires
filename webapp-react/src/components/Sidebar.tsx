@@ -79,10 +79,9 @@ export function Sidebar({ currentView, onViewChange, language, user, onLogout }:
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: t.dashboard },
     { id: 'questionnaires', icon: FileText, label: t.questionnaires },
-    { id: 'form-responses', icon: Database, label: t.formResponses },
-    { id: 'themes', icon: Palette, label: t.themes },
     { id: 'samples', icon: Send, label: t.samples },
     { id: 'invitations', icon: Mail, label: t.invitations },
+    { id: 'form-responses', icon: Database, label: t.formResponses },
     { 
       id: 'quotas', 
       icon: Target, 
@@ -93,6 +92,7 @@ export function Sidebar({ currentView, onViewChange, language, user, onLogout }:
         { id: 'quota-monitoring', icon: Monitor, label: t.quotaMonitoring }
       ]
     },
+    { id: 'themes', icon: Palette, label: t.themes },
     { id: 'locations', icon: MapPin, label: t.locations },
     { id: 'reports', icon: BarChart3, label: t.reports }
   ];

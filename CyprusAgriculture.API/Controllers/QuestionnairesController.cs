@@ -501,6 +501,7 @@ namespace CyprusAgriculture.API.Controllers
                         sp.Farm.MainCrops,
                         sp.Farm.LivestockTypes,
                         sp.Farm.LegalStatus,
+                        sp.Farm.SizeCategory,
                         sp.CreatedAt
                     })
                     .ToListAsync();

@@ -6,7 +6,6 @@ import { Quota, quotaVariables } from './QuotaManagementPage';
 
 
 const QuotaMonitoringDashboardPage: React.FC = ({}) => {
-    const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
     const [quotas, setQuotas] = useState<Quota[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
@@ -19,7 +18,7 @@ const QuotaMonitoringDashboardPage: React.FC = ({}) => {
 
   useEffect(() => {
     loadQuotas();
-    fetchQuestionnaires();
+    //fetchQuestionnaires();
     if (autoRefresh) {
       const interval = setInterval(loadQuotas, 30 * 1000);
       return () => clearInterval(interval);
@@ -27,10 +26,10 @@ const QuotaMonitoringDashboardPage: React.FC = ({}) => {
   }, [autoRefresh]);
 
 
-  const fetchQuestionnaires = async () => {
-        var questionnaires = await QuestionnaireService.getQuestionnaires();
-        setQuestionnaires(questionnaires.data);
-    };
+  // const fetchQuestionnaires = async () => {
+  //       var questionnaires = await QuestionnaireService.getQuestionnaires();
+  //       setQuestionnaires(questionnaires.data);
+  //   };
   
     const loadQuotas = async () => {
       setLoading(true);
@@ -81,27 +80,6 @@ const QuotaMonitoringDashboardPage: React.FC = ({}) => {
     }
   };
 
-  const formatTime = (isoString?: string) => {
-    if (!isoString) return 'Δεν υπάρχει';
-    return new Date(isoString).toLocaleString('el-GR');
-  };
-
-  const formatDuration = (minutes?: number) => {
-    if (!minutes || minutes <= 0) return 'Δεν υπάρχει';
-    
-    if (minutes < 60) {
-      return `${Math.round(minutes)} λεπτά`;
-    } else if (minutes < 1440) {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = Math.round(minutes % 60);
-      return `${hours}ω ${remainingMinutes}λ`;
-    } else {
-      const days = Math.floor(minutes / 1440);
-      const hours = Math.floor((minutes % 1440) / 60);
-      return `${days}η ${hours}ω`;
-    }
-  };
-
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -126,7 +104,7 @@ const QuotaMonitoringDashboardPage: React.FC = ({}) => {
             <span className="text-sm">Αυτόματη ανανέωση (30s)</span>
           </label>
           <button
-            onClick={fetchQuestionnaires}
+            onClick={loadQuotas}
             disabled={loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
           >

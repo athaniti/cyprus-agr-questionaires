@@ -45,6 +45,7 @@ export interface Farm {
   livestockType?: string;
   legalStatus?: string;
   status?: string;
+  sizeCategory?: string;
   createdAt?: string;
 }
 
@@ -76,6 +77,22 @@ export class SamplesService {
   static async createSample(sample: Partial<Sample>): Promise<Sample> {
     const response = await fetch(`${API_BASE_URL}/samples`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(sample),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  }
+
+  static async updateSample(id:string, sample: Partial<Sample>): Promise<Sample> {
+    const response = await fetch(`${API_BASE_URL}/samples/${id}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
