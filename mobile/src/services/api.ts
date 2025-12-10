@@ -102,6 +102,10 @@ class ApiService {
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
+
+  getApiUrl()  {
+    return this.baseURL;
+  }
 }
 
 export const apiService = new ApiService();

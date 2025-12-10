@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useDashboardStats, useRegionalData } from "@/hooks/useDashboard";
+import { apiService } from "@/services/api";
 
 const Dashboard = () => {
   const { data: statsData, isLoading: statsLoading, error: statsError } = useDashboardStats();
@@ -42,7 +43,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <Header title="Αρχική" showSync showLogo />
+      <Header title={"Αρχική " + apiService.getApiUrl()} showSync showLogo />
 
       <main className="container max-w-4xl mx-auto p-4 pb-20">
         {/* Stats Overview */}
