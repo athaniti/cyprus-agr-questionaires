@@ -196,6 +196,7 @@ namespace CyprusAgriculture.API.Controllers
             {
                 var query = _context.InvitationBatches
                     .Include(b => b.InvitationTemplate)
+                    .ThenInclude(it=> it.Questionnaire)
                     .AsQueryable();
 
                 if (questionnaireId.HasValue)
@@ -205,22 +206,30 @@ namespace CyprusAgriculture.API.Controllers
 
                 var batches = await query
                     .OrderByDescending(b => b.Id)
-                    .Select(b=>new
-                    {
-                        b.Id,
-                        b.Name,
-                        b.ScheduledAt,
-                        b.SentAt,
-                        SerializedFarmIds = b.RecipientFarms,
-                        b.InvitationTemplateId,
-                        TemplateName=b.InvitationTemplate.Name,
-                        b.InvitationTemplate.QuestionnaireId,
-                        QuestionnaireName=b.InvitationTemplate.Questionnaire.Name,
-
-                    })
                     .ToListAsync();
 
-                return Ok(batches);
+                var batchesResponse = new List<object>();
+                foreach (var batch in batches)
+                {
+                    var farmIds = JsonSerializer.Deserialize<List<string>>(batch.RecipientFarms) ?? new List<string>();
+                    batchesResponse.Add(new
+                        {
+                            batch.Id,
+                            batch.Name,
+                            batch.ScheduledAt,
+                            batch.SentAt,
+                            SerializedFarmIds = batch.RecipientFarms,
+                            batch.InvitationTemplateId,
+                            TemplateName=batch.InvitationTemplate.Name,
+                            batch.InvitationTemplate.QuestionnaireId,
+                            QuestionnaireName=batch.InvitationTemplate.Questionnaire.Name,
+                            TotalResponses = _context.QuestionnaireResponses.Count(qr => farmIds.Contains(qr.FarmId) &&  qr.QuestionnaireId == batch.InvitationTemplate.QuestionnaireId),
+                            TotalCompleted = _context.QuestionnaireResponses.Count(qr => farmIds.Contains(qr.FarmId) && qr.Status=="completed" && qr.QuestionnaireId == batch.InvitationTemplate.QuestionnaireId),
+                        }
+                    );
+                }
+
+                return Ok(batchesResponse);
             }
             catch (Exception ex)
             {

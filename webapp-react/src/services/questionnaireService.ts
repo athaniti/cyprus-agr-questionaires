@@ -27,6 +27,8 @@ export interface InvitationBatch {
   recipientFarmIds?:any[];
   sentAt?:string;
   scheduledAt?:string;
+  totalResponses?:number;
+  totalCompleted?:number;
 }
 
 export interface InvitationTemplate {

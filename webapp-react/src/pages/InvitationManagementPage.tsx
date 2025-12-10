@@ -149,9 +149,9 @@ const InvitationManagementPage: React.FC = () => {
     ];
 
     const engagementData = [
-      { name: 'Δεν ξεκίνησαν', value: (batch.recipientFarmIds??[]).length, color: '#ef4444' },
-      { name: 'Ξεκίνησαν', value: 0, color: '#06b6d4' },
-      { name: 'Ολοκλήρωσαν', value: 0, color: '#10b981' }
+      { name: 'Δεν ξεκίνησαν', value: (batch.recipientFarmIds??[]).length - (batch.totalCompleted??0), color: '#ef4444' },
+      { name: 'Ξεκίνησαν', value: (batch.totalResponses??0)-(batch.totalCompleted??0), color: '#06b6d4' },
+      { name: 'Ολοκλήρωσαν', value: (batch.totalCompleted??0), color: '#10b981' }
     ];
 
     const timelineData = [
@@ -181,8 +181,8 @@ const InvitationManagementPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600" title='Το ποσοστό των εκκινημένων ερωτηματολογίων προς το σύνολο των προσκλήσεων'>Ποσοστό Συμμετοχής</p>
-                  <p className="text-2xl font-bold text-red-600">0%</p>
+                  <p className="text-sm text-gray-600" title='Το πλήθος των εκκινημένων ερωτηματολογίων'>Συμμετοχή</p>
+                  <p className="text-2xl font-bold text-red-600">{batch.totalResponses??0}</p>
                 </div>
                 <Users className="h-8 w-8 text-red-600" />
               </div>
@@ -193,8 +193,8 @@ const InvitationManagementPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600" title='Το ποσοστό των οριστικά υποβληθέντων ερωτηματολογίων προς το σύνολο των προσκλήσεων'>Ποσοστό Ολοκλήρωσης</p>
-                  <p className="text-2xl font-bold text-red-600">0%</p>
+                  <p className="text-sm text-gray-600" title='Το πλήθος των οριστικά υποβληθέντων ερωτηματολογίων'>Ολοκληρωμένα</p>
+                  <p className="text-2xl font-bold text-red-600">{batch.totalResponses??0}</p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-red-600" />
               </div>
@@ -322,13 +322,13 @@ const InvitationManagementPage: React.FC = () => {
                   </tr>
                   <tr className="border-b">
                     <td className="p-3">Ξεκίνησαν Ερωτηματολόγιο</td>
-                    <td className="text-right p-3">0</td>
-                    <td className="text-right p-3">0%</td>
+                    <td className="text-right p-3">{(batch.totalResponses??0) - (batch.totalCompleted??0)}</td>
+                    <td className="text-right p-3">{(100*((batch.totalResponses??0) - (batch.totalCompleted??0))/(batch.recipientFarmIds??[]).length).toFixed(1)}%</td>
                   </tr>
                   <tr className="border-b">
                     <td className="p-3 font-semibold">Ολοκλήρωσαν Ερωτηματολόγιο</td>
-                    <td className="text-right p-3 font-semibold text-green-600">0</td>
-                    <td className="text-right p-3 font-semibold text-green-600">0%</td>
+                    <td className="text-right p-3 font-semibold text-green-600">{(batch.totalCompleted??0)}</td>
+                    <td className="text-right p-3 font-semibold text-green-600">{(100*(batch.totalCompleted??0)/(batch.recipientFarmIds??[]).length).toFixed(1)}%</td>
                   </tr>
                 </tbody>
               </table>
